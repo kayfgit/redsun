@@ -3,9 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Point, BrushConfig } from '@/types';
 import {
-  drawStrokeStart,
-  drawSmoothSegment,
-  drawFullStroke,
+  drawSegment,
   clearCanvas,
   redrawAllStrokes,
 } from '@/lib/inkBrushEngine';
@@ -18,7 +16,6 @@ export function useInkBrush(
   const [strokes, setStrokes] = useState<Point[][]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
   const currentStrokeRef = useRef<Point[]>([]);
-  const lastPointTimeRef = useRef(0);
 
   const getCanvasPoint = useCallback(
     (e: PointerEvent): Point => {
@@ -52,9 +49,14 @@ export function useInkBrush(
       currentStrokeRef.current = [point];
       setIsDrawing(true);
 
+      // Draw initial dot
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        drawStrokeStart(ctx, point, config);
+        const r = config.maxWidth * 0.3;
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(26, 26, 26, ${config.inkOpacity})`;
+        ctx.fill();
       }
     },
     [canvasRef, config, getCanvasPoint]
@@ -64,20 +66,26 @@ export function useInkBrush(
     (e: PointerEvent) => {
       if (!currentStrokeRef.current.length) return;
 
-      const now = Date.now();
-      if (now - lastPointTimeRef.current < 5) return; // throttle
-      lastPointTimeRef.current = now;
-
       const canvas = canvasRef.current;
       if (!canvas) return;
 
-      const point = getCanvasPoint(e);
-      const prev = currentStrokeRef.current[currentStrokeRef.current.length - 1];
-      currentStrokeRef.current.push(point);
+      // Process all coalesced events for smooth, gap-free strokes
+      const events = e.getCoalescedEvents?.() ?? [e];
 
       const ctx = canvas.getContext('2d');
-      if (ctx) {
-        drawSmoothSegment(ctx, prev, point, config);
+      if (!ctx) return;
+
+      for (const coalescedEvent of events) {
+        const point = getCanvasPoint(coalescedEvent);
+        const prev = currentStrokeRef.current[currentStrokeRef.current.length - 1];
+
+        // Skip points that are too close (< 1.5px)
+        const dx = point.x - prev.x;
+        const dy = point.y - prev.y;
+        if (dx * dx + dy * dy < 2.25) continue;
+
+        currentStrokeRef.current.push(point);
+        drawSegment(ctx, prev, point, config);
       }
     },
     [canvasRef, config, getCanvasPoint]
@@ -90,15 +98,14 @@ export function useInkBrush(
     currentStrokeRef.current = [];
     setIsDrawing(false);
 
-    // Redraw the completed stroke with proper tapering
     const canvas = canvasRef.current;
     if (canvas) {
       const ctx = canvas.getContext('2d');
       if (ctx) {
         setStrokes((prev) => {
           const newStrokes = [...prev, completedStroke];
-          // Redraw everything with proper taper on the last stroke
-          redrawAllStrokes(ctx, newStrokes, canvas.width / (window.devicePixelRatio || 1), canvas.height / (window.devicePixelRatio || 1), config);
+          const dpr = window.devicePixelRatio || 1;
+          redrawAllStrokes(ctx, newStrokes, canvas.width / dpr, canvas.height / dpr, config);
           return newStrokes;
         });
       }
@@ -133,12 +140,10 @@ export function useInkBrush(
     }
   }, [canvasRef, config]);
 
-  // Set up canvas DPI and attach event listeners
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // HiDPI setup
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
     canvas.width = rect.width * dpr;
@@ -149,7 +154,6 @@ export function useInkBrush(
       ctx.scale(dpr, dpr);
     }
 
-    // Pointer events
     canvas.addEventListener('pointerdown', handlePointerDown);
     canvas.addEventListener('pointermove', handlePointerMove);
     canvas.addEventListener('pointerup', handlePointerUp);

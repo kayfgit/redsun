@@ -16,26 +16,26 @@ export function SimilarCharacters({
   isLoading = false,
 }: SimilarCharactersProps) {
   return (
-    <div className="flex flex-col gap-3">
-      <h2 className="font-sans text-xs font-medium uppercase tracking-widest text-ink-light">
+    <div className="flex flex-col gap-4">
+      <h2 className="font-sans text-sm font-medium uppercase tracking-widest text-ink-light">
         Similar Characters
       </h2>
 
       {characters.length === 0 && !isLoading ? (
-        <p className="py-8 text-center font-sans text-sm text-ink-light/60">
+        <p className="py-12 text-center font-sans text-base text-ink-light/60">
           Draw a character to see matches
         </p>
       ) : isLoading ? (
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-4 gap-2.5">
           {Array.from({ length: 8 }).map((_, i) => (
             <div
               key={i}
-              className="h-14 w-14 animate-pulse rounded-sm bg-ink-wash"
+              className="h-[72px] w-[72px] animate-pulse rounded-sm bg-ink-wash"
             />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-4 gap-2.5">
           {characters.map((char) => (
             <CharacterButton
               key={char}

@@ -51,7 +51,7 @@ export function TypeInput({ onMatches }: TypeInputProps) {
   }, [query, onMatches]);
 
   return (
-    <div className="flex w-full max-w-[400px] flex-col items-center justify-center aspect-square">
+    <div className="flex w-full max-w-[600px] flex-col items-center justify-center aspect-square">
       <div className="w-full px-4">
         <input
           type="text"

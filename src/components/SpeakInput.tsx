@@ -36,7 +36,7 @@ export function SpeakInput({ onMatches }: SpeakInputProps) {
 
   if (!isSupported) {
     return (
-      <div className="flex w-full max-w-[400px] flex-col items-center justify-center aspect-square">
+      <div className="flex w-full max-w-[600px] flex-col items-center justify-center aspect-square">
         <p className="px-4 text-center font-sans text-sm text-ink-light">
           Speech recognition is not supported in this browser.
           <br />
@@ -49,7 +49,7 @@ export function SpeakInput({ onMatches }: SpeakInputProps) {
   }
 
   return (
-    <div className="flex w-full max-w-[400px] flex-col items-center justify-center gap-6 aspect-square">
+    <div className="flex w-full max-w-[600px] flex-col items-center justify-center gap-6 aspect-square">
       {/* Microphone button */}
       <button
         onClick={isListening ? stopListening : startListening}

@@ -18,7 +18,7 @@ export default function Home() {
   const [drawStrokes, setDrawStrokes] = useState<Point[][]>([]);
 
   const { matches: drawMatches, isLoading, recognize } =
-    useCharacterRecognition();
+    useCharacterRecognition(600);
 
   // Trigger recognition when strokes change
   useEffect(() => {
@@ -48,7 +48,6 @@ export default function Home() {
     setSelectedChar(null);
   }, []);
 
-  // Pick the right matches based on mode
   const currentMatches =
     mode === 'draw'
       ? drawMatches
@@ -62,11 +61,11 @@ export default function Home() {
 
       <div className="ink-wash-divider mx-6 sm:mx-8" />
 
-      <main className="flex flex-1 flex-col items-center px-6 py-8 sm:px-8">
+      <main className="flex flex-1 flex-col items-center px-6 py-10 sm:px-8">
         {/* Hero area: canvas + similar characters */}
-        <div className="flex w-full max-w-3xl flex-col items-center gap-8 lg:flex-row lg:items-start lg:justify-center lg:gap-10">
+        <div className="flex w-full max-w-5xl flex-col items-center gap-10 lg:flex-row lg:items-start lg:justify-center lg:gap-12">
           {/* Input area (canvas / type / speak) */}
-          <div className="flex flex-col items-center gap-5">
+          <div className="flex w-full max-w-[600px] flex-col items-center gap-6">
             {mode === 'draw' && (
               <DrawingCanvas onStrokesChange={handleStrokesChange} />
             )}
@@ -79,7 +78,7 @@ export default function Home() {
           </div>
 
           {/* Similar characters panel */}
-          <div className="w-full max-w-[260px] lg:pt-0">
+          <div className="w-full max-w-[330px] lg:pt-0">
             <SimilarCharacters
               characters={currentMatches}
               selectedChar={selectedChar}

@@ -15,8 +15,8 @@ export function CharacterButton({
     <button
       onClick={() => onClick?.(character)}
       className={`
-        flex h-14 w-14 items-center justify-center rounded-sm
-        font-serif-cn text-2xl transition-all duration-200
+        flex h-[72px] w-[72px] items-center justify-center rounded-sm
+        font-serif-cn text-3xl transition-all duration-200
         ${
           isSelected
             ? 'bg-seal-red/10 text-ink ring-1 ring-seal-red/40'
