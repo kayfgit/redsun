@@ -28,6 +28,15 @@ body {
   position: relative;
 }
 
+/* Pointer cursor on all interactive controls (Tailwind v4 no longer ships this by default) */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+label[for],
+summary,
+a[href] {
+  cursor: pointer;
+}
+
 /* Rice paper texture overlay - pure CSS */
 body::before {
   content: '';
@@ -52,6 +61,22 @@ body::before {
     rgba(26, 26, 26, 0.12),
     transparent
   );
+}
+
+/* Modal animations */
+@keyframes fadein {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slidein {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-fadein {
+  animation: fadein 160ms ease-out;
+}
+.animate-slidein {
+  animation: slidein 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Scrollbar styling */

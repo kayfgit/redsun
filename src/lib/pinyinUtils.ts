@@ -157,6 +157,52 @@ export function resolveInput(
 }
 
 /**
+ * Find example phrases that contain a given character.
+ * Returns up to `limit` phrases from PHRASE_DICT, each with pinyin + meaning.
+ */
+export function findExamplePhrases(
+  char: string,
+  limit = 4,
+): { phrase: string; pinyin: string; meaning: string }[] {
+  if (!char || char.length !== 1) return [];
+
+  const results: { phrase: string; pinyin: string; meaning: string }[] = [];
+  for (const phrase of Object.keys(PHRASE_DICT)) {
+    if (phrase.length > 1 && phrase.includes(char)) {
+      const pinyin = phrase
+        .split('')
+        .map((c) => CHAR_INFO[c]?.pinyin || c)
+        .join(' ');
+      results.push({ phrase, pinyin, meaning: PHRASE_DICT[phrase] });
+      if (results.length >= limit) break;
+    }
+  }
+  return results;
+}
+
+/**
+ * Find characters that share the same toneless pinyin (homophones).
+ */
+export function findHomophones(char: string, limit = 8): string[] {
+  const info = CHAR_INFO[char];
+  if (!info) return [];
+
+  const base = info.pinyin
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/ü/g, 'v')
+    .toLowerCase();
+
+  const entries = PINYIN_MAP[base];
+  if (!entries) return [];
+
+  return entries
+    .map(([c]) => c)
+    .filter((c) => c !== char)
+    .slice(0, limit);
+}
+
+/**
  * Get a translation for accumulated phrase characters.
  * Tries to match known sub-phrases and fills gaps with individual meanings.
  */

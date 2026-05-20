@@ -9,7 +9,9 @@ import { TypeInput } from '@/components/TypeInput';
 import { SpeakInput } from '@/components/SpeakInput';
 import { SimilarCharacters } from '@/components/SimilarCharacters';
 import { PhraseBuilder } from '@/components/PhraseBuilder';
+import { CharacterModal } from '@/components/CharacterModal';
 import { useCharacterRecognition } from '@/hooks/useCharacterRecognition';
+import { CHAR_INFO } from '@/lib/pinyinData';
 
 interface PhraseEntry {
   char: string;
@@ -27,6 +29,7 @@ export default function Home() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [speakPanelTitle, setSpeakPanelTitle] = useState('');
   const [speakDetailChar, setSpeakDetailChar] = useState<string | null>(null);
+  const [modalChar, setModalChar] = useState<string | null>(null);
 
   const { matches: drawMatches, isLoading, recognize } =
     useCharacterRecognition(600);
@@ -50,13 +53,9 @@ export default function Home() {
   }, []);
 
   const handleCharSelect = useCallback((char: string) => {
-    if (mode === 'speak') {
-      // In speak mode, clicking a match opens the detail view
-      setSpeakDetailChar(char);
-    } else {
-      setSelectedChar((prev) => (prev === char ? null : char));
-    }
-  }, [mode]);
+    setSelectedChar(char);
+    setModalChar(char);
+  }, []);
 
   const handleModeChange = useCallback((newMode: InputMode) => {
     setMode(newMode);
@@ -74,12 +73,19 @@ export default function Home() {
     setPhrase([]);
   }, []);
 
-  const currentMatches =
+  // Only surface characters we actually have pinyin/meaning data for.
+  // (For phrases — strings longer than 1 — we let them through; the modal
+  // breaks them down per-character with graceful fallbacks.)
+  const filterKnown = (chars: string[]) =>
+    chars.filter((c) => c.length > 1 || CHAR_INFO[c]);
+
+  const currentMatches = filterKnown(
     mode === 'draw'
       ? drawMatches
       : mode === 'type'
         ? typeMatches
-        : speakMatches;
+        : speakMatches
+  );
 
   const highlightIdx =
     mode === 'type' && currentMatches.length > 0
@@ -148,6 +154,13 @@ export default function Home() {
       <footer className="pb-4 text-center font-sans text-xs text-ink-light/40">
         红日 Redsun
       </footer>
+
+      {modalChar && (
+        <CharacterModal
+          character={modalChar}
+          onClose={() => setModalChar(null)}
+        />
+      )}
     </div>
   );
 }
