@@ -1,54 +1,99 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { COMMON_CHARACTERS } from '@/lib/constants';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { getCandidates, resolveInput, resolvePhrase, splitPinyin } from '@/lib/pinyinUtils';
+import { CHAR_INFO } from '@/lib/pinyinData';
+
+interface PhraseEntry {
+  char: string;
+  pinyin: string;
+  meaning: string;
+}
 
 interface TypeInputProps {
   onMatches: (matches: string[]) => void;
+  onConfirm: (entries: PhraseEntry[]) => void;
+  selectedIndex: number;
+  onSelectedIndexChange: (index: number) => void;
 }
 
-// Flat list of all characters for searching
-const ALL_CHARACTERS = COMMON_CHARACTERS.flat();
-
-export function TypeInput({ onMatches }: TypeInputProps) {
+export function TypeInput({ onMatches, onConfirm, selectedIndex, onSelectedIndexChange }: TypeInputProps) {
   const [query, setQuery] = useState('');
+  const matchesRef = useRef<string[]>([]);
 
   useEffect(() => {
     if (!query.trim()) {
       onMatches([]);
+      matchesRef.current = [];
+      onSelectedIndexChange(0);
       return;
     }
 
-    // If the input is a Chinese character, find similar-looking ones
-    // For now, show characters from the same group or nearby groups
     const isChinese = /[\u4e00-\u9fff]/.test(query);
 
+    let candidates: string[];
     if (isChinese) {
-      // Find which group the character belongs to
-      const chars = query.split('');
-      const lastChar = chars[chars.length - 1];
-      const matches: string[] = [];
-
-      for (const group of COMMON_CHARACTERS) {
-        if (group.includes(lastChar)) {
-          matches.push(...group.filter((c) => c !== lastChar));
-        }
-      }
-
-      // If not found in any group, show first group as fallback
-      if (matches.length === 0) {
-        // Show the typed characters plus some common ones
-        matches.push(...chars, ...ALL_CHARACTERS.slice(0, 12 - chars.length));
-      }
-
-      onMatches(matches.slice(0, 12));
+      const chars = query.match(/[\u4e00-\u9fff]/g) || [];
+      candidates = chars.slice(0, 12);
     } else {
-      // Pinyin-like input: show a sample set
-      // In a full implementation, this would search a pinyin dictionary
-      const index = query.length % COMMON_CHARACTERS.length;
-      onMatches(COMMON_CHARACTERS[index]);
+      candidates = getCandidates(query).slice(0, 12);
     }
-  }, [query, onMatches]);
+
+    matchesRef.current = candidates;
+    onMatches(candidates);
+    onSelectedIndexChange(0);
+  }, [query, onMatches, onSelectedIndexChange]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      const matches = matchesRef.current;
+
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        if (matches.length === 0) return;
+
+        if (e.shiftKey) {
+          // Shift+Tab: go backward
+          onSelectedIndexChange(selectedIndex <= 0 ? matches.length - 1 : selectedIndex - 1);
+        } else {
+          // Tab: go forward
+          onSelectedIndexChange(selectedIndex >= matches.length - 1 ? 0 : selectedIndex + 1);
+        }
+        return;
+      }
+
+      if (e.key !== 'Enter' || !query.trim()) return;
+
+      const selected = matches[selectedIndex] || matches[0];
+      if (!selected) return;
+
+      const isChinese = /[\u4e00-\u9fff]/.test(query);
+      const isMultiChar = selected.length > 1;
+
+      if (isChinese || isMultiChar) {
+        // Resolve the selected phrase/character
+        const entries = resolvePhrase(selected);
+        if (entries.length > 0) {
+          onConfirm(entries);
+          setQuery('');
+        }
+      } else {
+        // Single pinyin syllable → confirm the selected character
+        const info = CHAR_INFO[selected];
+        onConfirm([{
+          char: selected,
+          pinyin: info?.pinyin || '?',
+          meaning: info?.meaning || '?',
+        }]);
+        setQuery('');
+      }
+    },
+    [query, onConfirm, selectedIndex, onSelectedIndexChange]
+  );
+
+  // Determine if we're in phrase mode (multi-syllable input)
+  const trimmed = query.toLowerCase().trim();
+  const isPhrase = !(/[\u4e00-\u9fff]/.test(trimmed)) && trimmed.length > 0 && splitPinyin(trimmed) !== null && (splitPinyin(trimmed)?.length ?? 0) > 1;
 
   return (
     <div className="flex w-full max-w-[600px] flex-col items-center justify-center aspect-square">
@@ -57,12 +102,15 @@ export function TypeInput({ onMatches }: TypeInputProps) {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={handleKeyDown}
           placeholder="Type pinyin or character..."
           className="w-full border-b-2 border-ink/20 bg-transparent py-3 text-center font-serif-cn text-2xl text-ink placeholder:font-sans placeholder:text-base placeholder:text-ink-light/40 outline-none transition-colors focus:border-ink/50"
           autoFocus
         />
         <p className="mt-3 text-center font-sans text-xs text-ink-light/50">
-          e.g. &quot;ni hao&quot; or &quot;你好&quot;
+          {isPhrase
+            ? 'Tab / Shift+Tab to browse \u00B7 Enter to confirm'
+            : 'e.g. \u201Cren\u201D \u2192 \u4EBA \u00B7 Enter to confirm'}
         </p>
       </div>
     </div>
