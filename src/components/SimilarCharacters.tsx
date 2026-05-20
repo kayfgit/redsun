@@ -8,6 +8,7 @@ interface SimilarCharactersProps {
   highlightIndex?: number;
   onSelect: (char: string) => void;
   isLoading?: boolean;
+  title?: string;
 }
 
 export function SimilarCharacters({
@@ -16,6 +17,7 @@ export function SimilarCharacters({
   highlightIndex = -1,
   onSelect,
   isLoading = false,
+  title,
 }: SimilarCharactersProps) {
   // Detect if items are phrases (multi-char) or single characters
   const isPhrase = characters.length > 0 && characters[0].length > 1;
@@ -23,7 +25,7 @@ export function SimilarCharacters({
   return (
     <div className="flex flex-col gap-4">
       <h2 className="font-sans text-sm font-medium uppercase tracking-widest text-ink-light">
-        {isPhrase ? 'Phrase Candidates' : 'Similar Characters'}
+        {title || (isPhrase ? 'Phrase Candidates' : 'Similar Characters')}
       </h2>
 
       {characters.length === 0 && !isLoading ? (

@@ -6,8 +6,8 @@ interface SpeechRecognitionResult {
   isListening: boolean;
   transcript: string;
   isSupported: boolean;
-  startListening: () => void;
-  stopListening: () => void;
+  toggle: () => void;
+  reset: () => void;
 }
 
 export function useSpeechRecognition(): SpeechRecognitionResult {
@@ -15,6 +15,7 @@ export function useSpeechRecognition(): SpeechRecognitionResult {
   const [transcript, setTranscript] = useState('');
   const [isSupported, setIsSupported] = useState(true);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const wantListeningRef = useRef(false);
 
   useEffect(() => {
     const SpeechRecognitionAPI =
@@ -30,31 +31,71 @@ export function useSpeechRecognition(): SpeechRecognitionResult {
     const recognition = new SpeechRecognitionAPI();
     recognition.lang = 'zh-CN';
     recognition.interimResults = true;
-    recognition.continuous = false;
+    recognition.continuous = true;
     recognitionRef.current = recognition;
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
-      const result = event.results[event.results.length - 1];
-      setTranscript(result[0].transcript);
+      let full = '';
+      for (let i = 0; i < event.results.length; i++) {
+        full += event.results[i][0].transcript;
+      }
+      setTranscript(full);
     };
 
-    recognition.onend = () => setIsListening(false);
-    recognition.onerror = () => setIsListening(false);
+    // onend fires when the browser stops the session for any reason.
+    // If the user still wants to be listening, restart after a short delay.
+    recognition.onend = () => {
+      if (wantListeningRef.current) {
+        setTimeout(() => {
+          if (!wantListeningRef.current) return;
+          try {
+            recognition.start();
+          } catch {
+            wantListeningRef.current = false;
+            setIsListening(false);
+          }
+        }, 200);
+      } else {
+        setIsListening(false);
+      }
+    };
+
+    recognition.onerror = () => {
+      // Let onend handle the restart/cleanup — don't change state here
+    };
   }, []);
 
-  const startListening = useCallback(() => {
-    if (recognitionRef.current && !isListening) {
+  const toggle = useCallback(() => {
+    const recognition = recognitionRef.current;
+    if (!recognition) return;
+
+    if (wantListeningRef.current) {
+      // User wants to stop
+      wantListeningRef.current = false;
+      recognition.stop();
+      // isListening will be set false in onend
+    } else {
+      // User wants to start
+      wantListeningRef.current = true;
       setTranscript('');
-      recognitionRef.current.start();
       setIsListening(true);
+      try {
+        recognition.start();
+      } catch {
+        // Already running — that's fine, just update visual state
+      }
     }
-  }, [isListening]);
+  }, []);
 
-  const stopListening = useCallback(() => {
-    if (recognitionRef.current && isListening) {
-      recognitionRef.current.stop();
+  const reset = useCallback(() => {
+    wantListeningRef.current = false;
+    const recognition = recognitionRef.current;
+    if (recognition) {
+      try { recognition.stop(); } catch { /* ignore */ }
     }
-  }, [isListening]);
+    setTranscript('');
+    setIsListening(false);
+  }, []);
 
-  return { isListening, transcript, isSupported, startListening, stopListening };
+  return { isListening, transcript, isSupported, toggle, reset };
 }

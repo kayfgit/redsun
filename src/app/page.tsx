@@ -25,6 +25,8 @@ export default function Home() {
   const [drawStrokes, setDrawStrokes] = useState<Point[][]>([]);
   const [phrase, setPhrase] = useState<PhraseEntry[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [speakPanelTitle, setSpeakPanelTitle] = useState('');
+  const [speakDetailChar, setSpeakDetailChar] = useState<string | null>(null);
 
   const { matches: drawMatches, isLoading, recognize } =
     useCharacterRecognition(600);
@@ -48,13 +50,20 @@ export default function Home() {
   }, []);
 
   const handleCharSelect = useCallback((char: string) => {
-    setSelectedChar((prev) => (prev === char ? null : char));
-  }, []);
+    if (mode === 'speak') {
+      // In speak mode, clicking a match opens the detail view
+      setSpeakDetailChar(char);
+    } else {
+      setSelectedChar((prev) => (prev === char ? null : char));
+    }
+  }, [mode]);
 
   const handleModeChange = useCallback((newMode: InputMode) => {
     setMode(newMode);
     setSelectedChar(null);
     setSelectedIndex(0);
+    setSpeakPanelTitle('');
+    setSpeakDetailChar(null);
   }, []);
 
   const handleConfirm = useCallback((entries: PhraseEntry[]) => {
@@ -72,13 +81,17 @@ export default function Home() {
         ? typeMatches
         : speakMatches;
 
-  // In type mode, highlight selected index; in draw mode, highlight first
   const highlightIdx =
     mode === 'type' && currentMatches.length > 0
       ? selectedIndex
       : mode === 'draw' && currentMatches.length > 0
         ? 0
         : -1;
+
+  const panelTitle =
+    mode === 'speak' && speakPanelTitle
+      ? speakPanelTitle
+      : undefined;
 
   return (
     <div className="relative z-10 flex min-h-full flex-col">
@@ -87,9 +100,8 @@ export default function Home() {
       <div className="ink-wash-divider mx-6 sm:mx-8" />
 
       <main className="flex flex-1 flex-col items-center px-6 py-10 sm:px-8">
-        {/* Hero area: canvas + similar characters */}
         <div className="flex w-full max-w-5xl flex-col items-center gap-10 lg:flex-row lg:items-start lg:justify-center lg:gap-12">
-          {/* Input area (canvas / type / speak) + phrase builder + mode switcher */}
+          {/* Input area */}
           <div className="flex w-full max-w-[600px] flex-col items-center gap-6">
             {mode === 'draw' && (
               <DrawingCanvas onStrokesChange={handleStrokesChange} />
@@ -103,10 +115,14 @@ export default function Home() {
               />
             )}
             {mode === 'speak' && (
-              <SpeakInput onMatches={handleSpeakMatches} />
+              <SpeakInput
+                onMatches={handleSpeakMatches}
+                onPanelTitle={setSpeakPanelTitle}
+                detailChar={speakDetailChar}
+                onDetailCharChange={setSpeakDetailChar}
+              />
             )}
 
-            {/* Phrase builder — sits between input and mode switcher */}
             {phrase.length > 0 && (
               <PhraseBuilder entries={phrase} onClear={handleClearPhrase} />
             )}
@@ -114,20 +130,20 @@ export default function Home() {
             <ModeSwitcher mode={mode} onModeChange={handleModeChange} />
           </div>
 
-          {/* Similar characters panel */}
+          {/* Panel */}
           <div className="w-full max-w-[330px] lg:pt-0">
             <SimilarCharacters
               characters={currentMatches}
-              selectedChar={selectedChar}
+              selectedChar={mode === 'speak' ? speakDetailChar : selectedChar}
               highlightIndex={highlightIdx}
               onSelect={handleCharSelect}
               isLoading={mode === 'draw' && isLoading}
+              title={panelTitle}
             />
           </div>
         </div>
       </main>
 
-      {/* Decorative ink wash footer line */}
       <div className="ink-wash-divider mx-6 mb-4 sm:mx-8" />
       <footer className="pb-4 text-center font-sans text-xs text-ink-light/40">
         红日 Redsun

@@ -1,11 +1,11 @@
 import type { BrushConfig } from '@/types';
 
 export const DEFAULT_BRUSH_CONFIG: BrushConfig = {
-  minWidth: 1.5,
-  maxWidth: 14,
+  minWidth: 1.2,
+  maxWidth: 10,
   smoothing: 0.3,
-  inkOpacity: 0.88,
-  velocityScale: 0.7,
+  inkOpacity: 0.9,
+  velocityScale: 0.75,
   thinning: 0.5,
 };
 

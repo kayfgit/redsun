@@ -6,8 +6,12 @@ import {
   drawSegment,
   clearCanvas,
   redrawAllStrokes,
+  makeBristles,
+  inkLoadFromDistance,
 } from '@/lib/inkBrushEngine';
 import { DEFAULT_BRUSH_CONFIG } from '@/lib/constants';
+
+type Bristle = ReturnType<typeof makeBristles>[number];
 
 export function useInkBrush(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
@@ -16,6 +20,9 @@ export function useInkBrush(
   const [strokes, setStrokes] = useState<Point[][]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
   const currentStrokeRef = useRef<Point[]>([]);
+  const bristlesRef = useRef<Bristle[]>([]);
+  const cumDistRef = useRef(0);
+  const segmentIndexRef = useRef(0);
 
   const getCanvasPoint = useCallback(
     (e: PointerEvent): Point => {
@@ -49,13 +56,19 @@ export function useInkBrush(
       currentStrokeRef.current = [point];
       setIsDrawing(true);
 
-      // Draw initial dot
+      // Fresh bristles + ink for this stroke (unique geometry each time)
+      const seed = point.x * 1000 + point.y + performance.now();
+      bristlesRef.current = makeBristles(seed);
+      cumDistRef.current = 0;
+      segmentIndexRef.current = 0;
+
+      // Draw initial dot — slightly irregular
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        const r = config.maxWidth * 0.3;
+        const r = config.maxWidth * 0.22;
         ctx.beginPath();
         ctx.arc(point.x, point.y, r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(26, 26, 26, ${config.inkOpacity})`;
+        ctx.fillStyle = `rgba(26, 26, 26, ${config.inkOpacity * 0.9})`;
         ctx.fill();
       }
     },
@@ -82,10 +95,25 @@ export function useInkBrush(
         // Skip points that are too close (< 1.5px)
         const dx = point.x - prev.x;
         const dy = point.y - prev.y;
-        if (dx * dx + dy * dy < 2.25) continue;
+        const d2 = dx * dx + dy * dy;
+        if (d2 < 2.25) continue;
 
         currentStrokeRef.current.push(point);
-        drawSegment(ctx, prev, point, config);
+
+        // Track ink depletion: brush dries as it travels (fixed supply model)
+        cumDistRef.current += Math.sqrt(d2);
+        const inkLoad = inkLoadFromDistance(cumDistRef.current);
+
+        segmentIndexRef.current++;
+        drawSegment(
+          ctx,
+          prev,
+          point,
+          config,
+          bristlesRef.current,
+          inkLoad,
+          segmentIndexRef.current
+        );
       }
     },
     [canvasRef, config, getCanvasPoint]
