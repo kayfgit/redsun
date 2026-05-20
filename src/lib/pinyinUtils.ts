@@ -1,10 +1,28 @@
 import { ALL_SYLLABLES, PINYIN_MAP, CHAR_INFO, PHRASE_DICT } from './pinyinData';
 
 /**
+ * Normalize pinyin input: strip tone marks, spaces, separators, and tone digits,
+ * convert ü → v, lowercase. So "Bāxī rén", "ba xi ren", "ba1 xi1 ren2", and
+ * "baxiren" all become "baxiren".
+ */
+export function normalizePinyin(input: string): string {
+  return input
+    .normalize('NFD')
+    // strip only tone-specific combining marks: grave, acute, macron, caron.
+    // we deliberately keep U+0308 (diaeresis) so ü survives → v below.
+    .replace(/[̀́̄̌]/g, '')
+    .normalize('NFC')           // recompose u+diaeresis back into ü
+    .toLowerCase()
+    .replace(/ü/g, 'v')
+    .replace(/[\s'\-]/g, '')    // strip spaces, apostrophes, hyphens
+    .replace(/[1-5]/g, '');     // strip numeric tone marks
+}
+
+/**
  * Split a pinyin string into individual syllables using greedy longest-match.
  */
 export function splitPinyin(input: string): string[] | null {
-  const s = input.toLowerCase().trim();
+  const s = normalizePinyin(input);
   if (!s) return null;
 
   const result: string[] = [];
@@ -41,7 +59,7 @@ export function lookupPinyin(syllable: string): string[] {
  * For multi-syllable: return phrase candidates (e.g. "nihao" → ["你好", "你号", "泥好", ...]).
  */
 export function getCandidates(input: string): string[] {
-  const trimmed = input.toLowerCase().trim();
+  const trimmed = normalizePinyin(input);
   if (!trimmed) return [];
 
   // Try as single syllable
@@ -122,18 +140,19 @@ export function resolveInput(
   input: string,
   selectedPhrase?: string
 ): { char: string; pinyin: string; meaning: string }[] {
-  const trimmed = input.toLowerCase().trim();
-  if (!trimmed) return [];
-
   // If a specific phrase was selected, use it
   if (selectedPhrase) {
     return resolvePhrase(selectedPhrase);
   }
 
-  // Chinese characters
-  if (/^[\u4e00-\u9fff]+$/.test(trimmed)) {
-    return resolvePhrase(trimmed);
+  // Chinese characters — use raw input (without pinyin normalization)
+  const raw = input.trim();
+  if (/^[一-鿿]+$/.test(raw)) {
+    return resolvePhrase(raw);
   }
+
+  const trimmed = normalizePinyin(input);
+  if (!trimmed) return [];
 
   // Single syllable
   const direct = PINYIN_MAP[trimmed];
@@ -187,11 +206,7 @@ export function findHomophones(char: string, limit = 8): string[] {
   const info = CHAR_INFO[char];
   if (!info) return [];
 
-  const base = info.pinyin
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/ü/g, 'v')
-    .toLowerCase();
+  const base = normalizePinyin(info.pinyin);
 
   const entries = PINYIN_MAP[base];
   if (!entries) return [];
