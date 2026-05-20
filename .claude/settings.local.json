@@ -4,7 +4,10 @@
       "WebSearch",
       "WebFetch(domain:hanziwriter.org)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:www.npmjs.com)"
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:gugray.github.io)",
+      "WebFetch(domain:api.github.com)"
     ]
   }
 }
