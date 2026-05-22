@@ -21,8 +21,13 @@ export function Header() {
       <div className="flex items-center gap-3">
         <LanguageSelector />
 
-        {/* Login placeholder */}
-        <button className="flex items-center gap-1.5 rounded-full bg-ink px-4 py-1.5 font-sans text-sm font-medium text-rice-paper transition-colors hover:bg-ink-light">
+        {/* Login placeholder — feature still in development, so disabled */}
+        <button
+          disabled
+          title="Login is in development"
+          aria-disabled="true"
+          className="flex cursor-not-allowed items-center gap-1.5 rounded-full bg-ink/30 px-4 py-1.5 font-sans text-sm font-medium text-rice-paper/70"
+        >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
             <circle cx="12" cy="7" r="4" />
