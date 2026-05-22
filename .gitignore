@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# raw dictionary source data (downloaded by scripts/build-dictionary.mts)
+/.data
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

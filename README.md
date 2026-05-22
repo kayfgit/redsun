@@ -12,7 +12,7 @@
 
 ## Live Demo
 
-🌐 **[redsun.vercel.app](https://redsun.vercel.app)** *(placeholder — coming soon)*
+🌐 [redsun-three.vercel.app](https://redsun-three.vercel.app)
 
 ## About
 
@@ -26,6 +26,10 @@ It's not a course or a streak-driven app. It's the tool you keep open in another
 tab while you read, write, or study.
 
 ## Features
+
+- **~3,000-character dictionary** — covers the HSK 3.0 character set: enough to
+  comfortably read everyday Chinese, news, and novels. Every character carries
+  pinyin, an English gloss, and example words drawn from HSK vocabulary.
 
 - **Three ways to look up a character**
   - ✏️ **Draw** — sketch the character on the canvas and Redsun recognizes it
@@ -99,6 +103,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | `npm run build` | Build for production |
 | `npm run start` | Run the production build |
 | `npm run lint` | Lint the codebase |
+| `npm run build-dictionary` | Rebuild the dictionary from the source datasets |
 | `npm run generate-audio` | Pre-generate pronunciation audio |
 
 ## Contributing
@@ -107,4 +112,19 @@ Contributions are welcome! Feel free to open an issue or submit a pull request.
 
 ## License
 
-Released under the [MIT License](LICENSE).
+The Redsun application source code is released under the
+[MIT License](LICENSE).
+
+### Dictionary data
+
+The bundled dictionary (`src/lib/dictionary.generated.ts`) is built by
+`npm run build-dictionary` from two open datasets:
+
+- **HSK 3.0 vocabulary** — [drkameleon/complete-hsk-vocabulary](https://github.com/drkameleon/complete-hsk-vocabulary)
+- **CC-CEDICT** — the [CC-CEDICT project](https://www.mdbg.net/chinese/dictionary?page=cc-cedict),
+  licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
+
+Because it incorporates CC-CEDICT, the **dictionary data is distributed under
+[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)**, separately
+from the MIT-licensed application code. See [ATTRIBUTION.md](ATTRIBUTION.md) for
+full credits.
