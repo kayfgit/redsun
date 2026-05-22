@@ -10,6 +10,7 @@ import {
   inkLoadFromDistance,
 } from '@/lib/inkBrushEngine';
 import { DEFAULT_BRUSH_CONFIG } from '@/lib/constants';
+import { BrushSound } from '@/lib/brushSound';
 
 type Bristle = ReturnType<typeof makeBristles>[number];
 
@@ -23,6 +24,10 @@ export function useInkBrush(
   const bristlesRef = useRef<Bristle[]>([]);
   const cumDistRef = useRef(0);
   const segmentIndexRef = useRef(0);
+
+  // Synthesised brushing sound; lazily builds its audio graph on first stroke.
+  const brushSoundRef = useRef<BrushSound | null>(null);
+  if (!brushSoundRef.current) brushSoundRef.current = new BrushSound();
 
   // Mirror of `strokes` for use inside the resize handler, which must redraw
   // without re-running its effect every time the stroke list changes.
@@ -83,6 +88,10 @@ export function useInkBrush(
       currentStrokeRef.current = [point];
       setIsDrawing(true);
 
+      // Soft onset for the brushing sound (the AudioContext resumes here,
+      // inside the pointerdown user gesture, as browsers require).
+      brushSoundRef.current?.move(3);
+
       // Fresh bristles + ink for this stroke (unique geometry each time)
       const seed = point.x * 1000 + point.y + performance.now();
       bristlesRef.current = makeBristles(seed);
@@ -127,8 +136,12 @@ export function useInkBrush(
 
         currentStrokeRef.current.push(point);
 
+        // Modulate the brushing sound by how far the brush just moved.
+        const dist = Math.sqrt(d2);
+        brushSoundRef.current?.move(dist);
+
         // Track ink depletion: brush dries as it travels (fixed supply model)
-        cumDistRef.current += Math.sqrt(d2);
+        cumDistRef.current += dist;
         const inkLoad = inkLoadFromDistance(cumDistRef.current);
 
         segmentIndexRef.current++;
@@ -148,6 +161,9 @@ export function useInkBrush(
 
   const handlePointerUp = useCallback(() => {
     if (currentStrokeRef.current.length === 0) return;
+
+    // Brush lifted — fade the brushing sound out.
+    brushSoundRef.current?.lift();
 
     const completedStroke = [...currentStrokeRef.current];
     currentStrokeRef.current = [];
@@ -194,6 +210,15 @@ export function useInkBrush(
       });
     }
   }, [canvasRef, config]);
+
+  // Tear down the audio graph when the component unmounts. A fresh instance
+  // is left behind so a remount (e.g. React StrictMode in dev) still has sound.
+  useEffect(() => {
+    return () => {
+      brushSoundRef.current?.dispose();
+      brushSoundRef.current = new BrushSound();
+    };
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;

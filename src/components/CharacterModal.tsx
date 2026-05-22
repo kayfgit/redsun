@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { CHAR_INFO } from '@/lib/pinyinData';
 import { findExamplePhrases, findHomophones } from '@/lib/pinyinUtils';
 import { useCopy } from '@/hooks/useCopy';
+import { PronounceButton } from './PronounceButton';
 
 /** Clipboard / checkmark glyph, swapped when a copy succeeds. */
 function CopyGlyph({ copied }: { copied: boolean }) {
@@ -102,17 +103,7 @@ function CharView({ character }: { character: string }) {
             {character}
           </span>
           <div className="flex flex-col gap-2">
-            <button
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-ink-wash text-ink-light transition-colors hover:bg-ink/10 hover:text-ink"
-              title="Play pronunciation (coming soon)"
-              aria-label="Play pronunciation"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-                <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-              </svg>
-            </button>
+            <PronounceButton text={character} iconSize={18} className="h-10 w-10" />
             <button
               onClick={() => copy(character)}
               className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors ${

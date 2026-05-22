@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useCopy } from '@/hooks/useCopy';
+import { PronounceButton } from './PronounceButton';
 import { CHAR_INFO, PINYIN_MAP } from '@/lib/pinyinData';
 import { CharacterDetail } from './CharacterDetail';
 
@@ -122,16 +123,7 @@ export function SpeakInput({
           <span className="font-serif-cn text-[140px] leading-none text-ink">
             {detectedChar}
           </span>
-          <button
-            className="flex h-12 w-12 items-center justify-center rounded-full bg-ink-wash text-ink-light transition-colors hover:bg-ink/10 hover:text-ink"
-            title="Play pronunciation (coming soon)"
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-              <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-              <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-            </svg>
-          </button>
+          <PronounceButton text={detectedChar} iconSize={24} className="h-12 w-12" />
         </div>
 
         <span className="font-sans text-lg text-ink-light italic">{meaning}</span>
