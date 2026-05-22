@@ -22,7 +22,7 @@ const maShanZheng = Ma_Shan_Zheng({
 });
 
 export const metadata: Metadata = {
-  title: '红日',
+  title: '红日 Redsun',
   description:
     'A quick-consult tool for Mandarin learners. Draw, type, or speak a character to look it up.',
 };

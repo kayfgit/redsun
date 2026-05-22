@@ -3,6 +3,23 @@
 import { useEffect } from 'react';
 import { CHAR_INFO } from '@/lib/pinyinData';
 import { findExamplePhrases, findHomophones } from '@/lib/pinyinUtils';
+import { useCopy } from '@/hooks/useCopy';
+
+/** Clipboard / checkmark glyph, swapped when a copy succeeds. */
+function CopyGlyph({ copied }: { copied: boolean }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      {copied ? (
+        <path d="M20 6 9 17l-5-5" />
+      ) : (
+        <>
+          <rect width="14" height="14" x="8" y="8" rx="2" />
+          <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+        </>
+      )}
+    </svg>
+  );
+}
 
 interface CharacterModalProps {
   character: string;
@@ -67,7 +84,7 @@ function CharView({ character }: { character: string }) {
   const examples = findExamplePhrases(character, 4);
   const homophones = findHomophones(character, 8);
 
-  const handleCopy = () => navigator.clipboard.writeText(character);
+  const { copied, copy } = useCopy();
 
   return (
     <div className="flex flex-col gap-6">
@@ -97,15 +114,16 @@ function CharView({ character }: { character: string }) {
               </svg>
             </button>
             <button
-              onClick={handleCopy}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-ink-wash text-ink-light transition-colors hover:bg-ink/10 hover:text-ink"
-              title="Copy character"
+              onClick={() => copy(character)}
+              className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
+                copied
+                  ? 'bg-seal-red/10 text-seal-red'
+                  : 'bg-ink-wash text-ink-light hover:bg-ink/10 hover:text-ink'
+              }`}
+              title={copied ? 'Copied!' : 'Copy character'}
               aria-label="Copy character"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <rect width="14" height="14" x="8" y="8" rx="2" />
-                <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-              </svg>
+              <CopyGlyph copied={copied} />
             </button>
           </div>
         </div>
@@ -217,7 +235,7 @@ function PhraseView({ phrase }: { phrase: string }) {
     .map((c) => CHAR_INFO[c]?.meaning || '?')
     .join(' · ');
 
-  const handleCopy = () => navigator.clipboard.writeText(phrase);
+  const { copied, copy } = useCopy();
 
   return (
     <div className="flex flex-col gap-6">
@@ -230,15 +248,16 @@ function PhraseView({ phrase }: { phrase: string }) {
             {phrase}
           </span>
           <button
-            onClick={handleCopy}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-ink-wash text-ink-light transition-colors hover:bg-ink/10 hover:text-ink"
-            title="Copy phrase"
+            onClick={() => copy(phrase)}
+            className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
+              copied
+                ? 'bg-seal-red/10 text-seal-red'
+                : 'bg-ink-wash text-ink-light hover:bg-ink/10 hover:text-ink'
+            }`}
+            title={copied ? 'Copied!' : 'Copy phrase'}
             aria-label="Copy phrase"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <rect width="14" height="14" x="8" y="8" rx="2" />
-              <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-            </svg>
+            <CopyGlyph copied={copied} />
           </button>
         </div>
         <span className="font-sans text-base italic text-ink-light">

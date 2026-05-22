@@ -24,6 +24,33 @@ export function useInkBrush(
   const cumDistRef = useRef(0);
   const segmentIndexRef = useRef(0);
 
+  // Mirror of `strokes` for use inside the resize handler, which must redraw
+  // without re-running its effect every time the stroke list changes.
+  const strokesRef = useRef<Point[][]>([]);
+  strokesRef.current = strokes;
+
+  // Match the canvas backing store to its current CSS size × devicePixelRatio.
+  // Resizing the backing store clears the canvas, so we redraw afterwards.
+  const syncCanvasResolution = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const targetW = Math.round(rect.width * dpr);
+    const targetH = Math.round(rect.height * dpr);
+    if (targetW === 0 || targetH === 0) return;
+    if (canvas.width === targetW && canvas.height === targetH) return;
+
+    canvas.width = targetW;
+    canvas.height = targetH;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+    redrawAllStrokes(ctx, strokesRef.current, rect.width, rect.height, config);
+  }, [canvasRef, config]);
+
   const getCanvasPoint = useCallback(
     (e: PointerEvent): Point => {
       const canvas = canvasRef.current;
@@ -172,15 +199,15 @@ export function useInkBrush(
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
+    syncCanvasResolution();
 
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.scale(dpr, dpr);
-    }
+    // Keep the backing store sharp when the canvas's CSS size changes...
+    const resizeObserver = new ResizeObserver(() => syncCanvasResolution());
+    resizeObserver.observe(canvas);
+
+    // ...and when devicePixelRatio changes (browser zoom, monitor move),
+    // which a ResizeObserver does not catch since the CSS size is unchanged.
+    window.addEventListener('resize', syncCanvasResolution);
 
     canvas.addEventListener('pointerdown', handlePointerDown);
     canvas.addEventListener('pointermove', handlePointerMove);
@@ -188,12 +215,14 @@ export function useInkBrush(
     canvas.addEventListener('pointerleave', handlePointerUp);
 
     return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', syncCanvasResolution);
       canvas.removeEventListener('pointerdown', handlePointerDown);
       canvas.removeEventListener('pointermove', handlePointerMove);
       canvas.removeEventListener('pointerup', handlePointerUp);
       canvas.removeEventListener('pointerleave', handlePointerUp);
     };
-  }, [canvasRef, handlePointerDown, handlePointerMove, handlePointerUp]);
+  }, [canvasRef, syncCanvasResolution, handlePointerDown, handlePointerMove, handlePointerUp]);
 
   return { strokes, isDrawing, clear, undo };
 }

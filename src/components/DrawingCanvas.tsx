@@ -20,10 +20,10 @@ export function DrawingCanvas({ onStrokesChange }: DrawingCanvasProps) {
   }
 
   return (
-    <div className="relative">
+    <div className="relative w-full max-w-[480px]">
       <canvas
         ref={canvasRef}
-        className="w-full aspect-square max-w-[600px] cursor-crosshair rounded-sm touch-none"
+        className="w-full aspect-square cursor-crosshair rounded-sm touch-none"
         style={{
           backgroundColor: '#F8F3EB',
           boxShadow: 'inset 0 0 50px rgba(0,0,0,0.03), 0 2px 8px rgba(0,0,0,0.06)',

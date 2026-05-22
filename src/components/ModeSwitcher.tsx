@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import type { InputMode } from '@/types';
 
 interface ModeSwitcherProps {
@@ -49,18 +50,60 @@ const modes: { id: InputMode; label: string; icon: React.ReactNode }[] = [
 ];
 
 export function ModeSwitcher({ mode, onModeChange }: ModeSwitcherProps) {
+  const buttonRefs = useRef<Partial<Record<InputMode, HTMLButtonElement>>>({});
+  // Geometry of the dark pill, in pixels relative to the container's padding box.
+  const [pill, setPill] = useState<{ left: number; width: number } | null>(null);
+
+  const measure = useCallback(() => {
+    const btn = buttonRefs.current[mode];
+    if (btn) setPill({ left: btn.offsetLeft, width: btn.offsetWidth });
+  }, [mode]);
+
+  // Re-measure when the active mode changes, on resize, and once webfonts
+  // settle (label widths shift slightly when Inter swaps in).
+  useLayoutEffect(() => {
+    measure();
+    window.addEventListener('resize', measure);
+    document.fonts?.ready.then(measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [measure]);
+
   return (
-    <div className="flex items-center justify-center gap-1 rounded-full bg-ink-wash p-1.5">
+    <div
+      className="relative flex items-center justify-center gap-1 rounded-full p-1.5"
+      style={{
+        backgroundColor: '#F8F3EB',
+        boxShadow:
+          '0 2px 8px rgba(0,0,0,0.06), inset 0 0 0 1px rgba(26, 26, 26, 0.08)',
+      }}
+    >
+      {/* Sliding pill — glides between options instead of teleporting */}
+      {pill && (
+        <span
+          aria-hidden
+          className="absolute top-1.5 bottom-1.5 rounded-full bg-ink shadow-sm"
+          style={{
+            left: pill.left,
+            width: pill.width,
+            transition:
+              'left 320ms cubic-bezier(0.34, 1.3, 0.64, 1), width 320ms cubic-bezier(0.34, 1.3, 0.64, 1)',
+          }}
+        />
+      )}
+
       {modes.map(({ id, label, icon }) => (
         <button
           key={id}
+          ref={(el) => {
+            if (el) buttonRefs.current[id] = el;
+          }}
           onClick={() => onModeChange(id)}
           className={`
-            flex items-center gap-2 rounded-full px-5 py-2.5 text-base font-sans font-medium
-            transition-all duration-200
+            relative z-10 flex items-center gap-2 rounded-full px-5 py-2.5
+            text-base font-sans font-medium transition-colors duration-200
             ${
               mode === id
-                ? 'bg-ink text-rice-paper shadow-sm'
+                ? 'text-rice-paper'
                 : 'text-ink-light hover:text-ink'
             }
           `}

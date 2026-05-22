@@ -96,8 +96,15 @@ export function TypeInput({ onMatches, onConfirm, selectedIndex, onSelectedIndex
   const isPhrase = !(/[\u4e00-\u9fff]/.test(trimmed)) && trimmed.length > 0 && splitPinyin(trimmed) !== null && (splitPinyin(trimmed)?.length ?? 0) > 1;
 
   return (
-    <div className="flex w-full max-w-[600px] flex-col items-center justify-center aspect-square">
-      <div className="w-full px-4">
+    <div
+      className="flex w-full max-w-[600px] flex-col items-center justify-center aspect-square rounded-sm"
+      style={{
+        backgroundColor: '#F8F3EB',
+        boxShadow: 'inset 0 0 50px rgba(0,0,0,0.03), 0 2px 8px rgba(0,0,0,0.06)',
+        border: '1px solid rgba(26, 26, 26, 0.08)',
+      }}
+    >
+      <div className="w-full px-12">
         <input
           type="text"
           value={query}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
+import { useCopy } from '@/hooks/useCopy';
 import { CHAR_INFO, PINYIN_MAP } from '@/lib/pinyinData';
 import { CharacterDetail } from './CharacterDetail';
 
@@ -69,13 +70,20 @@ export function SpeakInput({
     onPanelTitle('');
   }, [reset, onMatches, onPanelTitle, onDetailCharChange]);
 
-  const handleCopy = useCallback((char: string) => {
-    navigator.clipboard.writeText(char);
-  }, []);
+  const { copied, copy } = useCopy();
+
+  const paperCardStyle = {
+    backgroundColor: '#F8F3EB',
+    boxShadow: 'inset 0 0 50px rgba(0,0,0,0.03), 0 2px 8px rgba(0,0,0,0.06)',
+    border: '1px solid rgba(26, 26, 26, 0.08)',
+  } as const;
 
   if (!isSupported) {
     return (
-      <div className="flex w-full max-w-[600px] flex-col items-center justify-center aspect-square">
+      <div
+        className="flex w-full max-w-[600px] flex-col items-center justify-center aspect-square rounded-sm"
+        style={paperCardStyle}
+      >
         <p className="px-4 text-center font-sans text-sm text-ink-light">
           Speech recognition is not supported in this browser.
           <br />
@@ -104,7 +112,10 @@ export function SpeakInput({
     const meaning = info?.meaning || '?';
 
     return (
-      <div className="flex w-full max-w-[600px] flex-col items-center justify-center gap-4 aspect-square">
+      <div
+        className="flex w-full max-w-[600px] flex-col items-center justify-center gap-4 aspect-square rounded-sm"
+        style={paperCardStyle}
+      >
         <span className="font-sans text-xl text-ink-light">{pinyin}</span>
 
         <div className="flex items-center gap-5">
@@ -127,14 +138,24 @@ export function SpeakInput({
 
         <div className="mt-4 flex gap-3">
           <button
-            onClick={() => handleCopy(detectedChar)}
-            className="flex items-center gap-2 rounded-full border border-ink/10 px-5 py-2.5 font-sans text-sm text-ink-light transition-colors hover:border-ink/20 hover:text-ink"
+            onClick={() => copy(detectedChar)}
+            className={`flex items-center gap-2 rounded-full border px-5 py-2.5 font-sans text-sm transition-colors ${
+              copied
+                ? 'border-seal-red/30 text-seal-red'
+                : 'border-ink/10 text-ink-light hover:border-ink/20 hover:text-ink'
+            }`}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <rect width="14" height="14" x="8" y="8" rx="2" />
-              <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+              {copied ? (
+                <path d="M20 6 9 17l-5-5" />
+              ) : (
+                <>
+                  <rect width="14" height="14" x="8" y="8" rx="2" />
+                  <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                </>
+              )}
             </svg>
-            Copy
+            {copied ? 'Copied!' : 'Copy'}
           </button>
           <button
             onClick={handleSpeakAgain}
@@ -154,7 +175,10 @@ export function SpeakInput({
 
   // Idle / Listening — microphone button
   return (
-    <div className="flex w-full max-w-[600px] flex-col items-center justify-center gap-6 aspect-square">
+    <div
+      className="flex w-full max-w-[600px] flex-col items-center justify-center gap-6 aspect-square rounded-sm"
+      style={paperCardStyle}
+    >
       <button
         onClick={toggle}
         className={`
@@ -162,9 +186,14 @@ export function SpeakInput({
           ${
             isListening
               ? 'bg-seal-red text-rice-paper shadow-xl shadow-seal-red/25 animate-pulse'
-              : 'bg-ink-wash text-ink-light hover:bg-ink/10 hover:text-ink'
+              : 'bg-rice-paper text-ink-light hover:bg-rice-paper-dark hover:text-ink'
           }
         `}
+        style={
+          isListening
+            ? undefined
+            : { boxShadow: '0 2px 12px rgba(0,0,0,0.08), inset 0 0 0 1px rgba(26,26,26,0.1)' }
+        }
       >
         <svg
           width="54"

@@ -1,6 +1,7 @@
 'use client';
 
 import { CHAR_INFO } from '@/lib/pinyinData';
+import { useCopy } from '@/hooks/useCopy';
 
 interface CharacterDetailProps {
   character: string;
@@ -12,9 +13,7 @@ export function CharacterDetail({ character, onBack }: CharacterDetailProps) {
   const pinyin = info?.pinyin || '?';
   const meaning = info?.meaning || '?';
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(character);
-  };
+  const { copied, copy } = useCopy();
 
   return (
     <div className="flex w-full max-w-[600px] flex-col items-center gap-6">
@@ -91,14 +90,24 @@ export function CharacterDetail({ character, onBack }: CharacterDetailProps) {
       {/* Action buttons */}
       <div className="flex gap-3">
         <button
-          onClick={handleCopy}
-          className="flex items-center gap-2 rounded-full border border-ink/10 px-4 py-2 font-sans text-sm text-ink-light transition-colors hover:border-ink/20 hover:text-ink"
+          onClick={() => copy(character)}
+          className={`flex items-center gap-2 rounded-full border px-4 py-2 font-sans text-sm transition-colors ${
+            copied
+              ? 'border-seal-red/30 text-seal-red'
+              : 'border-ink/10 text-ink-light hover:border-ink/20 hover:text-ink'
+          }`}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <rect width="14" height="14" x="8" y="8" rx="2" />
-            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+            {copied ? (
+              <path d="M20 6 9 17l-5-5" />
+            ) : (
+              <>
+                <rect width="14" height="14" x="8" y="8" rx="2" />
+                <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+              </>
+            )}
           </svg>
-          Copy
+          {copied ? 'Copied!' : 'Copy'}
         </button>
       </div>
     </div>
