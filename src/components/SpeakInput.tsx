@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useCopy } from '@/hooks/useCopy';
+import { playBeep } from '@/lib/beep';
 import { PronounceButton } from './PronounceButton';
 import { CHAR_INFO, PINYIN_MAP } from '@/lib/pinyinData';
 import { CharacterDetail } from './CharacterDetail';
@@ -14,38 +15,39 @@ interface SpeakInputProps {
   onDetailCharChange: (char: string | null) => void;
 }
 
+type Phase = 'idle' | 'capturing' | 'processing' | 'result' | 'empty';
+
+// If recognition somehow never delivers a result, don't hang forever.
+const PROCESSING_TIMEOUT = 6000;
+
 export function SpeakInput({
   onMatches,
   onPanelTitle,
   detailChar,
   onDetailCharChange,
 }: SpeakInputProps) {
-  const { isListening, transcript, isSupported, toggle, reset } =
-    useSpeechRecognition();
+  const [phase, setPhase] = useState<Phase>('idle');
   const [detectedChar, setDetectedChar] = useState<string | null>(null);
-  const [hasResult, setHasResult] = useState(false);
+  const { copied, copy } = useCopy();
 
-  // When listening stops and we have a transcript, show result
-  useEffect(() => {
-    if (isListening) {
-      onPanelTitle('');
-      return;
-    }
+  // Interprets a finished transcript: pick the first Han character, surface
+  // it plus its same-pinyin neighbours.
+  const handleResult = useCallback(
+    (text: string) => {
+      const chars = text.match(/[一-鿿]/g);
+      if (!chars || chars.length === 0) {
+        setPhase('empty');
+        return;
+      }
 
-    if (!transcript || hasResult) return;
-
-    const chars = transcript.match(/[\u4e00-\u9fff]/g);
-    if (chars && chars.length > 0) {
       const mainChar = chars[0];
       setDetectedChar(mainChar);
-      setHasResult(true);
 
-      // Find similar matches by pinyin
       const info = CHAR_INFO[mainChar];
       if (info) {
         const basePinyin = info.pinyin
           .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[̀-ͯ]/g, '')
           .replace(/ü/g, 'v')
           .toLowerCase();
 
@@ -58,33 +60,67 @@ export function SpeakInput({
         const ordered = [mainChar, ...similar.filter((c) => c !== mainChar)];
         onMatches(ordered.slice(0, 12));
         onPanelTitle('Similar Matches');
+      } else {
+        onMatches([mainChar]);
+        onPanelTitle('Detected');
       }
-    }
-  }, [isListening, transcript, hasResult, onMatches, onPanelTitle]);
+
+      setPhase('result');
+    },
+    [onMatches, onPanelTitle]
+  );
+
+  const { transcript, isSupported, start, stop, reset } = useSpeechRecognition({
+    onResult: handleResult,
+  });
+
+  // Safety net: never get stuck on the processing screen.
+  useEffect(() => {
+    if (phase !== 'processing') return;
+    const timer = setTimeout(() => setPhase('empty'), PROCESSING_TIMEOUT);
+    return () => clearTimeout(timer);
+  }, [phase]);
+
+  // Hold-to-talk. A ref tracks the press so the release handler isn't fooled
+  // by a stale render value.
+  const holdingRef = useRef(false);
+
+  const handlePressStart = useCallback(
+    (e: React.PointerEvent<HTMLButtonElement>) => {
+      if (holdingRef.current) return;
+      e.preventDefault();
+      e.currentTarget.setPointerCapture(e.pointerId);
+      holdingRef.current = true;
+      onMatches([]);
+      onPanelTitle('');
+      setDetectedChar(null);
+      setPhase('capturing');
+      playBeep(880, 120); // rising tone — capture started
+      start();
+    },
+    [start, onMatches, onPanelTitle]
+  );
+
+  const handlePressEnd = useCallback(() => {
+    if (!holdingRef.current) return;
+    holdingRef.current = false;
+    playBeep(520, 150); // lower tone — capture stopped
+    setPhase('processing');
+    stop();
+  }, [stop]);
 
   const handleSpeakAgain = useCallback(() => {
     reset();
     setDetectedChar(null);
-    setHasResult(false);
+    setPhase('idle');
     onDetailCharChange(null);
     onMatches([]);
     onPanelTitle('');
   }, [reset, onMatches, onPanelTitle, onDetailCharChange]);
 
-  const { copied, copy } = useCopy();
-
-  const paperCardStyle = {
-    backgroundColor: '#F8F3EB',
-    boxShadow: 'inset 0 0 50px rgba(0,0,0,0.03), 0 2px 8px rgba(0,0,0,0.06)',
-    border: '1px solid rgba(26, 26, 26, 0.08)',
-  } as const;
-
   if (!isSupported) {
     return (
-      <div
-        className="flex w-full max-w-[600px] flex-col items-center justify-center aspect-square rounded-sm"
-        style={paperCardStyle}
-      >
+      <div className="flex w-full max-w-[600px] flex-col items-center justify-center gap-2 aspect-square">
         <p className="px-4 text-center font-sans text-sm text-ink-light">
           Speech recognition is not supported in this browser.
           <br />
@@ -106,17 +142,24 @@ export function SpeakInput({
     );
   }
 
-  // Result view — big character with info
-  if (hasResult && detectedChar && !isListening) {
+  // Processing — recognition is finishing up
+  if (phase === 'processing') {
+    return (
+      <div className="flex w-full max-w-[600px] flex-col items-center justify-center gap-6 aspect-square">
+        <div className="h-14 w-14 animate-spin rounded-full border-2 border-ink/15 border-t-seal-red" />
+        <p className="font-sans text-base text-ink-light">Recognizing…</p>
+      </div>
+    );
+  }
+
+  // Result — big detected character
+  if (phase === 'result' && detectedChar) {
     const info = CHAR_INFO[detectedChar];
     const pinyin = info?.pinyin || '?';
     const meaning = info?.meaning || '?';
 
     return (
-      <div
-        className="flex w-full max-w-[600px] flex-col items-center justify-center gap-4 aspect-square rounded-sm"
-        style={paperCardStyle}
-      >
+      <div className="flex w-full max-w-[600px] flex-col items-center justify-center gap-4 aspect-square">
         <span className="font-sans text-xl text-ink-light">{pinyin}</span>
 
         <div className="flex items-center gap-5">
@@ -165,24 +208,24 @@ export function SpeakInput({
     );
   }
 
-  // Idle / Listening — microphone button
+  // Idle / capturing / empty — the microphone button (no card background)
+  const isCapturing = phase === 'capturing';
   return (
-    <div
-      className="flex w-full max-w-[600px] flex-col items-center justify-center gap-6 aspect-square rounded-sm"
-      style={paperCardStyle}
-    >
+    <div className="flex w-full max-w-[600px] flex-col items-center justify-center gap-6 aspect-square">
       <button
-        onClick={toggle}
+        onPointerDown={handlePressStart}
+        onPointerUp={handlePressEnd}
+        onPointerCancel={handlePressEnd}
         className={`
-          flex h-36 w-36 items-center justify-center rounded-full transition-all duration-300
+          flex h-36 w-36 select-none touch-none items-center justify-center rounded-full transition-all duration-300
           ${
-            isListening
+            isCapturing
               ? 'bg-seal-red text-rice-paper shadow-xl shadow-seal-red/25 animate-pulse'
               : 'bg-rice-paper text-ink-light hover:bg-rice-paper-dark hover:text-ink'
           }
         `}
         style={
-          isListening
+          isCapturing
             ? undefined
             : { boxShadow: '0 2px 12px rgba(0,0,0,0.08), inset 0 0 0 1px rgba(26,26,26,0.1)' }
         }
@@ -204,10 +247,14 @@ export function SpeakInput({
       </button>
 
       <p className="font-sans text-base text-ink-light">
-        {isListening ? 'Listening... tap to stop' : 'Tap to speak'}
+        {isCapturing
+          ? 'Listening… release to stop'
+          : phase === 'empty'
+            ? "Didn't catch that — hold and try again"
+            : 'Hold to speak'}
       </p>
 
-      {isListening && transcript && (
+      {isCapturing && transcript && (
         <p className="px-4 text-center font-serif-cn text-2xl text-ink/50">
           {transcript}
         </p>
