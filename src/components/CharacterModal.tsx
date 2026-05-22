@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { CHAR_INFO } from '@/lib/pinyinData';
 import { findExamplePhrases, findHomophones } from '@/lib/pinyinUtils';
 import { useCopy } from '@/hooks/useCopy';
@@ -28,7 +28,15 @@ interface CharacterModalProps {
 }
 
 export function CharacterModal({ character, onClose }: CharacterModalProps) {
-  const isPhrase = character.length > 1;
+  // `view` is the entry currently shown — starts at the opened character and
+  // changes when the user drills into a single character of a phrase.
+  const [view, setView] = useState(character);
+  useEffect(() => {
+    setView(character);
+  }, [character]);
+
+  const isPhrase = view.length > 1;
+  const canGoBack = view !== character;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -55,6 +63,21 @@ export function CharacterModal({ character, onClose }: CharacterModalProps) {
           boxShadow: '0 20px 60px rgba(0,0,0,0.25), inset 0 0 80px rgba(0,0,0,0.02)',
         }}
       >
+        {/* Back button — only when drilled into a character of a phrase */}
+        {canGoBack && (
+          <button
+            onClick={() => setView(character)}
+            className="absolute left-4 top-4 z-10 flex h-9 items-center gap-1 rounded-full pl-2 pr-3 font-sans text-sm text-ink-light transition-colors hover:bg-ink/10 hover:text-ink"
+            aria-label="Back to phrase"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 12H5" />
+              <path d="m12 19-7-7 7-7" />
+            </svg>
+            Back
+          </button>
+        )}
+
         {/* Close button */}
         <button
           onClick={onClose}
@@ -67,7 +90,11 @@ export function CharacterModal({ character, onClose }: CharacterModalProps) {
         </button>
 
         <div className="px-8 py-8 sm:px-12 sm:py-10">
-          {isPhrase ? <PhraseView phrase={character} /> : <CharView character={character} />}
+          {isPhrase ? (
+            <PhraseView phrase={view} onSelectChar={setView} />
+          ) : (
+            <CharView character={view} />
+          )}
         </div>
       </div>
     </div>
@@ -219,7 +246,13 @@ function CharView({ character }: { character: string }) {
 
 // ── Multi-char phrase view ──
 
-function PhraseView({ phrase }: { phrase: string }) {
+function PhraseView({
+  phrase,
+  onSelectChar,
+}: {
+  phrase: string;
+  onSelectChar: (char: string) => void;
+}) {
   const chars = phrase.split('');
   const pinyinJoined = chars.map((c) => CHAR_INFO[c]?.pinyin || c).join(' ');
   const meaningJoined = chars
@@ -238,18 +271,21 @@ function PhraseView({ phrase }: { phrase: string }) {
           <span className="font-serif-cn text-[88px] sm:text-[100px] leading-none text-ink">
             {phrase}
           </span>
-          <button
-            onClick={() => copy(phrase)}
-            className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
-              copied
-                ? 'bg-seal-red/10 text-seal-red'
-                : 'bg-ink-wash text-ink-light hover:bg-ink/10 hover:text-ink'
-            }`}
-            title={copied ? 'Copied!' : 'Copy phrase'}
-            aria-label="Copy phrase"
-          >
-            <CopyGlyph copied={copied} />
-          </button>
+          <div className="flex flex-col gap-2">
+            <PronounceButton text={phrase} iconSize={18} className="h-10 w-10" />
+            <button
+              onClick={() => copy(phrase)}
+              className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
+                copied
+                  ? 'bg-seal-red/10 text-seal-red'
+                  : 'bg-ink-wash text-ink-light hover:bg-ink/10 hover:text-ink'
+              }`}
+              title={copied ? 'Copied!' : 'Copy phrase'}
+              aria-label="Copy phrase"
+            >
+              <CopyGlyph copied={copied} />
+            </button>
+          </div>
         </div>
         <span className="font-sans text-base italic text-ink-light">
           {meaningJoined}
@@ -263,10 +299,12 @@ function PhraseView({ phrase }: { phrase: string }) {
           {chars.map((c, i) => {
             const ci = CHAR_INFO[c];
             return (
-              <div
+              <button
                 key={`${c}-${i}`}
-                className="flex items-center gap-3 rounded-sm bg-canvas-bg px-3 py-2"
+                onClick={() => onSelectChar(c)}
+                className="flex items-center gap-3 rounded-sm bg-canvas-bg px-3 py-2 text-left transition-colors hover:bg-rice-paper-dark"
                 style={{ border: '1px solid rgba(26,26,26,0.06)' }}
+                title={`View ${c}`}
               >
                 <span className="font-serif-cn text-4xl text-ink">{c}</span>
                 <div className="flex flex-col">
@@ -277,7 +315,20 @@ function PhraseView({ phrase }: { phrase: string }) {
                     {ci?.meaning || '?'}
                   </span>
                 </div>
-              </div>
+                <svg
+                  className="ml-auto text-ink-light/40"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="m9 18 6-6-6-6" />
+                </svg>
+              </button>
             );
           })}
         </div>

@@ -9,6 +9,8 @@ interface SimilarCharactersProps {
   onSelect: (char: string) => void;
   isLoading?: boolean;
   title?: string;
+  /** Message shown when there are no matches yet. */
+  emptyHint?: string;
 }
 
 export function SimilarCharacters({
@@ -18,6 +20,7 @@ export function SimilarCharacters({
   onSelect,
   isLoading = false,
   title,
+  emptyHint = 'Draw a character to see matches',
 }: SimilarCharactersProps) {
   // Detect if items are phrases (multi-char) or single characters
   const isPhrase = characters.length > 0 && characters[0].length > 1;
@@ -30,7 +33,7 @@ export function SimilarCharacters({
 
       {characters.length === 0 && !isLoading ? (
         <p className="py-12 text-center font-sans text-base text-ink-light/60">
-          Draw a character to see matches
+          {emptyHint}
         </p>
       ) : isLoading ? (
         <div className="grid grid-cols-4 gap-2.5">

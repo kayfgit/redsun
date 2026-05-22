@@ -99,6 +99,14 @@ export default function Home() {
       ? speakPanelTitle
       : undefined;
 
+  // Empty-state hint, phrased for whichever input mode is active.
+  const emptyHint =
+    mode === 'type'
+      ? 'Type pinyin to see matches'
+      : mode === 'speak'
+        ? 'Hold to speak and see matches'
+        : 'Draw a character to see matches';
+
   return (
     <div className="relative z-10 flex min-h-full flex-col">
       <Header />
@@ -129,7 +137,7 @@ export default function Home() {
               />
             )}
 
-            {phrase.length > 0 && (
+            {mode === 'type' && phrase.length > 0 && (
               <PhraseBuilder entries={phrase} onClear={handleClearPhrase} />
             )}
 
@@ -145,6 +153,7 @@ export default function Home() {
               onSelect={handleCharSelect}
               isLoading={mode === 'draw' && isLoading}
               title={panelTitle}
+              emptyHint={emptyHint}
             />
           </div>
         </div>
