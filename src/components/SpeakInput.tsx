@@ -5,7 +5,7 @@ import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useCopy } from '@/hooks/useCopy';
 import { playBeep } from '@/lib/beep';
 import { PronounceButton } from './PronounceButton';
-import { CHAR_INFO, PINYIN_MAP } from '@/lib/pinyinData';
+import { CHAR_INFO, PINYIN_MAP, PHRASE_DICT } from '@/lib/pinyinData';
 import { CharacterDetail } from './CharacterDetail';
 
 interface SpeakInputProps {
@@ -27,11 +27,13 @@ export function SpeakInput({
   onDetailCharChange,
 }: SpeakInputProps) {
   const [phase, setPhase] = useState<Phase>('idle');
-  const [detectedChar, setDetectedChar] = useState<string | null>(null);
+  // The full detected text — a single character or a multi-character phrase.
+  const [detected, setDetected] = useState<string | null>(null);
   const { copied, copy } = useCopy();
 
-  // Interprets a finished transcript: pick the first Han character, surface
-  // it plus its same-pinyin neighbours.
+  // Interprets a finished transcript: keep every Han character. A single
+  // character surfaces same-pinyin neighbours; a phrase surfaces its own
+  // characters.
   const handleResult = useCallback(
     (text: string) => {
       const chars = text.match(/[一-鿿]/g);
@@ -40,29 +42,38 @@ export function SpeakInput({
         return;
       }
 
-      const mainChar = chars[0];
-      setDetectedChar(mainChar);
+      const detectedText = chars.join('');
+      setDetected(detectedText);
 
-      const info = CHAR_INFO[mainChar];
-      if (info) {
-        const basePinyin = info.pinyin
-          .normalize('NFD')
-          .replace(/[̀-ͯ]/g, '')
-          .replace(/ü/g, 'v')
-          .toLowerCase();
+      if (chars.length === 1) {
+        const info = CHAR_INFO[detectedText];
+        if (info) {
+          const basePinyin = info.pinyin
+            .normalize('NFD')
+            .replace(/[̀-ͯ]/g, '')
+            .replace(/ü/g, 'v')
+            .toLowerCase();
 
-        const similar: string[] = [];
-        for (const [syllable, entries] of Object.entries(PINYIN_MAP)) {
-          if (syllable === basePinyin) {
-            similar.push(...entries.map(([c]) => c));
+          const similar: string[] = [];
+          for (const [syllable, entries] of Object.entries(PINYIN_MAP)) {
+            if (syllable === basePinyin) {
+              similar.push(...entries.map(([c]) => c));
+            }
           }
+          const ordered = [
+            detectedText,
+            ...similar.filter((c) => c !== detectedText),
+          ];
+          onMatches(ordered.slice(0, 12));
+          onPanelTitle('Similar Matches');
+        } else {
+          onMatches([detectedText]);
+          onPanelTitle('Detected');
         }
-        const ordered = [mainChar, ...similar.filter((c) => c !== mainChar)];
-        onMatches(ordered.slice(0, 12));
-        onPanelTitle('Similar Matches');
       } else {
-        onMatches([mainChar]);
-        onPanelTitle('Detected');
+        // Phrase — list its individual characters.
+        onMatches(chars);
+        onPanelTitle('Characters');
       }
 
       setPhase('result');
@@ -93,7 +104,7 @@ export function SpeakInput({
       holdingRef.current = true;
       onMatches([]);
       onPanelTitle('');
-      setDetectedChar(null);
+      setDetected(null);
       setPhase('capturing');
       playBeep(880, 120); // rising tone — capture started
       start();
@@ -111,7 +122,7 @@ export function SpeakInput({
 
   const handleSpeakAgain = useCallback(() => {
     reset();
-    setDetectedChar(null);
+    setDetected(null);
     setPhase('idle');
     onDetailCharChange(null);
     onMatches([]);
@@ -152,28 +163,39 @@ export function SpeakInput({
     );
   }
 
-  // Result — big detected character
-  if (phase === 'result' && detectedChar) {
-    const info = CHAR_INFO[detectedChar];
-    const pinyin = info?.pinyin || '?';
-    const meaning = info?.meaning || '?';
+  // Result — detected character or phrase
+  if (phase === 'result' && detected) {
+    const chars = Array.from(detected);
+    const isPhrase = chars.length > 1;
+
+    const pinyin = isPhrase
+      ? chars.map((c) => CHAR_INFO[c]?.pinyin || c).join(' ')
+      : CHAR_INFO[detected]?.pinyin || '?';
+    const meaning = isPhrase
+      ? PHRASE_DICT[detected] ||
+        chars.map((c) => CHAR_INFO[c]?.meaning || '?').join(' · ')
+      : CHAR_INFO[detected]?.meaning || '?';
 
     return (
       <div className="flex w-full max-w-[600px] flex-col items-center justify-center gap-4 aspect-square">
         <span className="font-sans text-xl text-ink-light">{pinyin}</span>
 
         <div className="flex items-center gap-5">
-          <span className="font-serif-cn text-[140px] leading-none text-ink">
-            {detectedChar}
+          <span
+            className={`font-serif-cn leading-none text-ink ${
+              isPhrase ? 'text-[76px]' : 'text-[140px]'
+            }`}
+          >
+            {detected}
           </span>
-          <PronounceButton text={detectedChar} iconSize={24} className="h-12 w-12" />
+          <PronounceButton text={detected} iconSize={24} className="h-12 w-12" />
         </div>
 
         <span className="font-sans text-lg text-ink-light italic">{meaning}</span>
 
         <div className="mt-4 flex gap-3">
           <button
-            onClick={() => copy(detectedChar)}
+            onClick={() => copy(detected)}
             className={`flex items-center gap-2 rounded-full border px-5 py-2.5 font-sans text-sm transition-colors ${
               copied
                 ? 'border-seal-red/30 text-seal-red'
