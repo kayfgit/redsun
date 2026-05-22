@@ -20,7 +20,7 @@ export function DrawingCanvas({ onStrokesChange }: DrawingCanvasProps) {
   }
 
   return (
-    <div className="relative w-full max-w-[480px]">
+    <div className="relative w-full max-w-[600px]">
       <canvas
         ref={canvasRef}
         className="w-full aspect-square cursor-crosshair rounded-sm touch-none"

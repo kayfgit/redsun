@@ -232,7 +232,21 @@ export function useInkBrush(
 
     // ...and when devicePixelRatio changes (browser zoom, monitor move),
     // which a ResizeObserver does not catch since the CSS size is unchanged.
-    window.addEventListener('resize', syncCanvasResolution);
+    // The `resize` event is not reliably fired for DPR-only changes, so we
+    // watch devicePixelRatio directly: a media query matching the current
+    // DPR fires `change` the moment it stops matching, and we re-arm it.
+    let dprQuery: MediaQueryList | null = null;
+    const handleDprChange = () => {
+      syncCanvasResolution();
+      watchDpr();
+    };
+    function watchDpr() {
+      dprQuery?.removeEventListener('change', handleDprChange);
+      const dpr = window.devicePixelRatio || 1;
+      dprQuery = window.matchMedia(`(resolution: ${dpr}dppx)`);
+      dprQuery.addEventListener('change', handleDprChange);
+    }
+    watchDpr();
 
     canvas.addEventListener('pointerdown', handlePointerDown);
     canvas.addEventListener('pointermove', handlePointerMove);
@@ -241,7 +255,7 @@ export function useInkBrush(
 
     return () => {
       resizeObserver.disconnect();
-      window.removeEventListener('resize', syncCanvasResolution);
+      dprQuery?.removeEventListener('change', handleDprChange);
       canvas.removeEventListener('pointerdown', handlePointerDown);
       canvas.removeEventListener('pointermove', handlePointerMove);
       canvas.removeEventListener('pointerup', handlePointerUp);

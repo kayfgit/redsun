@@ -9,6 +9,10 @@ export class BrushSound {
   private filter: BiquadFilterNode | null = null;
   private noise: AudioBufferSourceNode | null = null;
   private disposed = false;
+  /** Wall-clock time (performance.now) of the previous `move` call. */
+  private lastMoveTime = 0;
+  /** Time-smoothed brush speed (px/ms), eased toward each new reading. */
+  private smoothedSpeed = 0;
 
   /** Builds the audio graph lazily — must run inside a user gesture. */
   private init() {
@@ -49,30 +53,66 @@ export class BrushSound {
     this.gain = gain;
   }
 
-  /** Call on every brush movement; `speed` is pixels travelled since the last point. */
-  move(speed: number) {
+  /** Call on every brush movement; `distance` is pixels travelled since the last point. */
+  move(distance: number) {
     this.init();
-    if (!this.ctx || !this.gain || !this.filter) return;
+    if (!this.ctx || !this.gain || !this.filter || !this.noise) return;
     if (this.ctx.state === 'suspended') void this.ctx.resume();
 
     const now = this.ctx.currentTime;
-    const intensity = Math.min(1, speed / 22);
-    const level = 0.012 + intensity * 0.07;
 
-    // Rise to the movement level, then immediately queue a decay back to
-    // silence. While the brush keeps moving each call resets this, so the
-    // sound only sustains during actual travel — a held-still press goes quiet.
+    // Turn "pixels since the last point" into an actual speed (px per ms)
+    // using wall-clock time between calls. Pointer events fire at a roughly
+    // fixed rate, so distance alone barely reflects how fast the user draws —
+    // dividing by elapsed time does. Gaps are clamped so a pause then a
+    // fresh dab doesn't read as a huge speed.
+    const t = performance.now();
+    const dt = this.lastMoveTime ? Math.min(t - this.lastMoveTime, 100) : 16;
+    this.lastMoveTime = t;
+    const rawSpeed = distance / Math.max(dt, 1); // px/ms
+
+    // Ease the speed toward each new reading rather than using it raw. The
+    // per-event speed is jumpy — distance varies and dt is coarse — and
+    // driving the gain straight off it makes the sound lurch between levels
+    // (the "popping"). The smoothing factor is time-aware: it eases hard
+    // when events are sparse (slow drawing, stays responsive) and gently
+    // when they flood in (fast drawing, where the jumpiness is worst), so
+    // the result is a continuous very-slow → very-fast sweep.
+    const alpha = 1 - Math.exp(-dt / 40);
+    this.smoothedSpeed += (rawSpeed - this.smoothedSpeed) * alpha;
+    const speed = this.smoothedSpeed;
+
+    // 0 = barely creeping, 1 = fast sweep. The exponent curves the response
+    // so loudness grows in even-feeling steps across the whole speed range
+    // instead of jumping from soft straight to loud.
+    const intensity = Math.min(1, speed / 3) ** 0.7;
+
+    // Louder the faster the brush travels.
+    const level = 0.01 + intensity * 0.075;
     const gain = this.gain.gain;
+    // Glide to the movement level with a soft time constant — no sharp
+    // attack means no clicks — then queue a decay back to silence. While the
+    // brush keeps moving each call resets this, so the sound only sustains
+    // during actual travel; a held-still press falls quiet.
     gain.cancelScheduledValues(now);
     gain.setValueAtTime(gain.value, now);
-    gain.setTargetAtTime(level, now, 0.015);
-    gain.setTargetAtTime(0, now + 0.07, 0.05);
+    gain.setTargetAtTime(level, now, 0.05);
+    gain.setTargetAtTime(0, now + 0.12, 0.08);
 
-    this.filter.frequency.setTargetAtTime(1100 + intensity * 1800, now, 0.04);
+    // Sweep the bandpass from a dark, low rustle when slow to a bright hiss
+    // when fast.
+    this.filter.frequency.setTargetAtTime(600 + intensity * 2600, now, 0.06);
+
+    // Shift the noise texture's pitch as well: a slow drag has a deeper,
+    // coarser grain, a fast stroke a thinner, higher one. This timbre change
+    // is what makes slow vs fast clearly distinct, not just louder/quieter.
+    this.noise.playbackRate.setTargetAtTime(0.6 + intensity * 1.1, now, 0.08);
   }
 
   /** Call when the brush lifts — fades the sound out quickly. */
   lift() {
+    this.lastMoveTime = 0;
+    this.smoothedSpeed = 0;
     if (!this.ctx || !this.gain) return;
     this.gain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.05);
   }

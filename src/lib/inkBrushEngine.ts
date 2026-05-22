@@ -144,16 +144,12 @@ export function drawSegment(
 
 // ── Full stroke redraw (undo / initial render) ──
 
-// Approximate "ink supply" — distance in px the brush can paint before drying.
-// Most single strokes are shorter than this, so they stay fully wet.
-export const INK_SUPPLY_PX = 550;
-
-/** 0..1, 1 = full ink, drops below DRY_THRESHOLD only after lots of distance. */
-export function inkLoadFromDistance(cumDist: number): number {
-  // Stay near 1 for most of the supply, then fall off near the end.
-  // Plateau curve: 1 - (cumDist / SUPPLY)^3
-  const t = Math.min(1, cumDist / INK_SUPPLY_PX);
-  return Math.max(0.05, 1 - t * t * t);
+/**
+ * Ink load is always full — the brush never runs dry. The parameter is kept
+ * so existing callers don't need to change.
+ */
+export function inkLoadFromDistance(_cumDist: number): number {
+  return 1;
 }
 
 export function drawFullStroke(

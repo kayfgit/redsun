@@ -108,12 +108,12 @@ export default function Home() {
         : 'Draw a character to see matches';
 
   return (
-    <div className="relative z-10 flex min-h-full flex-col">
+    <div className="relative z-10 flex h-full flex-col overflow-hidden">
       <Header />
 
       <div className="ink-wash-divider mx-6 sm:mx-8" />
 
-      <main className="flex flex-1 flex-col items-center px-6 py-10 sm:px-8">
+      <main className="flex flex-1 flex-col items-center justify-center overflow-hidden px-6 py-6 sm:px-8">
         <div className="flex w-full max-w-5xl flex-col items-center gap-10 lg:flex-row lg:items-start lg:justify-center lg:gap-12">
           {/* Input area */}
           <div className="flex w-full max-w-[600px] flex-col items-center gap-6">
@@ -160,7 +160,7 @@ export default function Home() {
       </main>
 
       <div className="ink-wash-divider mx-6 mb-4 sm:mx-8" />
-      <footer className="pb-4 text-center font-sans text-xs text-ink-light/40">
+      <footer className="pb-5 pt-1 text-center font-sans text-xs text-ink-light/40">
         红日 Redsun
       </footer>
 
