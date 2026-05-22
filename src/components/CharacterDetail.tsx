@@ -3,6 +3,9 @@
 import { CHAR_INFO } from '@/lib/pinyinData';
 import { useCopy } from '@/hooks/useCopy';
 import { PronounceButton } from './PronounceButton';
+import { useLanguage } from './LanguageProvider';
+import { Meaning } from './Meaning';
+import type { TranslationKey } from '@/lib/i18n';
 
 interface CharacterDetailProps {
   character: string;
@@ -10,6 +13,7 @@ interface CharacterDetailProps {
 }
 
 export function CharacterDetail({ character, onBack }: CharacterDetailProps) {
+  const { t } = useLanguage();
   const info = CHAR_INFO[character];
   const pinyin = info?.pinyin || '?';
   const meaning = info?.meaning || '?';
@@ -27,7 +31,7 @@ export function CharacterDetail({ character, onBack }: CharacterDetailProps) {
           <path d="M19 12H5" />
           <path d="m12 19-7-7 7-7" />
         </svg>
-        Back
+        {t('action.back')}
       </button>
 
       {/* Main character card */}
@@ -46,7 +50,10 @@ export function CharacterDetail({ character, onBack }: CharacterDetailProps) {
           </span>
           <PronounceButton text={character} iconSize={20} className="h-10 w-10" />
         </div>
-        <span className="font-sans text-base text-ink-light italic">{meaning}</span>
+        <Meaning
+          text={meaning}
+          className="font-sans text-base text-ink-light italic"
+        />
       </div>
 
       {/* Info sections */}
@@ -54,26 +61,26 @@ export function CharacterDetail({ character, onBack }: CharacterDetailProps) {
         {/* Pronunciation */}
         <div className="flex flex-col gap-2 rounded-sm bg-canvas-bg p-4" style={{ border: '1px solid rgba(26,26,26,0.06)' }}>
           <h3 className="font-sans text-xs font-medium uppercase tracking-widest text-ink-light">
-            Pronunciation
+            {t('detail.pronunciation')}
           </h3>
           <p className="font-sans text-base text-ink">
             <span className="font-serif-cn text-lg">{pinyin}</span>
           </p>
           <p className="font-sans text-xs text-ink-light/60">
-            Tone: {getToneDescription(pinyin)}
+            {t('detail.toneLabel')}: {describeTone(pinyin, t)}
           </p>
         </div>
 
         {/* Writing */}
         <div className="flex flex-col gap-2 rounded-sm bg-canvas-bg p-4" style={{ border: '1px solid rgba(26,26,26,0.06)' }}>
           <h3 className="font-sans text-xs font-medium uppercase tracking-widest text-ink-light">
-            Writing
+            {t('detail.writing')}
           </h3>
           <p className="font-serif-cn text-4xl text-ink/20 text-center py-1">
             {character}
           </p>
           <p className="font-sans text-xs text-ink-light/60 text-center">
-            Stroke order animation coming soon
+            {t('modal.strokeOrderSoon')}
           </p>
         </div>
       </div>
@@ -98,17 +105,26 @@ export function CharacterDetail({ character, onBack }: CharacterDetailProps) {
               </>
             )}
           </svg>
-          {copied ? 'Copied!' : 'Copy'}
+          {copied ? t('action.copied') : t('action.copy')}
         </button>
       </div>
     </div>
   );
 }
 
-function getToneDescription(pinyin: string): string {
-  if (/[āēīōūǖ]/.test(pinyin)) return '1st tone (flat)';
-  if (/[áéíóúǘ]/.test(pinyin)) return '2nd tone (rising)';
-  if (/[ǎěǐǒǔǚ]/.test(pinyin)) return '3rd tone (dipping)';
-  if (/[àèìòùǜ]/.test(pinyin)) return '4th tone (falling)';
-  return 'Neutral tone';
+/** Localised tone description, e.g. "2nd tone (rising)". */
+function describeTone(
+  pinyin: string,
+  t: (key: TranslationKey) => string
+): string {
+  const tones: { re: RegExp; name: TranslationKey; desc: TranslationKey }[] = [
+    { re: /[āēīōūǖ]/, name: 'tone.first', desc: 'tone.flat' },
+    { re: /[áéíóúǘ]/, name: 'tone.second', desc: 'tone.rising' },
+    { re: /[ǎěǐǒǔǚ]/, name: 'tone.third', desc: 'tone.dipping' },
+    { re: /[àèìòùǜ]/, name: 'tone.fourth', desc: 'tone.falling' },
+  ];
+  for (const tone of tones) {
+    if (tone.re.test(pinyin)) return `${t(tone.name)} (${t(tone.desc)})`;
+  }
+  return t('tone.neutral');
 }

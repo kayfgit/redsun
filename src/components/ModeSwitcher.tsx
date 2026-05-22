@@ -2,16 +2,18 @@
 
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import type { InputMode } from '@/types';
+import type { TranslationKey } from '@/lib/i18n';
+import { useLanguage } from './LanguageProvider';
 
 interface ModeSwitcherProps {
   mode: InputMode;
   onModeChange: (mode: InputMode) => void;
 }
 
-const modes: { id: InputMode; label: string; icon: React.ReactNode }[] = [
+const modes: { id: InputMode; labelKey: TranslationKey; icon: React.ReactNode }[] = [
   {
     id: 'draw',
-    label: 'Draw',
+    labelKey: 'mode.draw',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 20h9" />
@@ -21,7 +23,7 @@ const modes: { id: InputMode; label: string; icon: React.ReactNode }[] = [
   },
   {
     id: 'type',
-    label: 'Type',
+    labelKey: 'mode.type',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="2" y="4" width="20" height="16" rx="2" />
@@ -38,7 +40,7 @@ const modes: { id: InputMode; label: string; icon: React.ReactNode }[] = [
   },
   {
     id: 'speak',
-    label: 'Speak',
+    labelKey: 'mode.speak',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
@@ -50,6 +52,7 @@ const modes: { id: InputMode; label: string; icon: React.ReactNode }[] = [
 ];
 
 export function ModeSwitcher({ mode, onModeChange }: ModeSwitcherProps) {
+  const { t, locale } = useLanguage();
   const buttonRefs = useRef<Partial<Record<InputMode, HTMLButtonElement>>>({});
   // Geometry of the dark pill, in pixels relative to the container's padding box.
   const [pill, setPill] = useState<{ left: number; width: number } | null>(null);
@@ -59,14 +62,15 @@ export function ModeSwitcher({ mode, onModeChange }: ModeSwitcherProps) {
     if (btn) setPill({ left: btn.offsetLeft, width: btn.offsetWidth });
   }, [mode]);
 
-  // Re-measure when the active mode changes, on resize, and once webfonts
-  // settle (label widths shift slightly when Inter swaps in).
+  // Re-measure when the active mode changes, on resize, once webfonts settle
+  // (label widths shift slightly when Inter swaps in), and when the language
+  // changes (translated labels have different widths).
   useLayoutEffect(() => {
     measure();
     window.addEventListener('resize', measure);
     document.fonts?.ready.then(measure);
     return () => window.removeEventListener('resize', measure);
-  }, [measure]);
+  }, [measure, locale]);
 
   return (
     <div
@@ -91,7 +95,7 @@ export function ModeSwitcher({ mode, onModeChange }: ModeSwitcherProps) {
         />
       )}
 
-      {modes.map(({ id, label, icon }) => (
+      {modes.map(({ id, labelKey, icon }) => (
         <button
           key={id}
           ref={(el) => {
@@ -109,7 +113,7 @@ export function ModeSwitcher({ mode, onModeChange }: ModeSwitcherProps) {
           `}
         >
           {icon}
-          {label}
+          {t(labelKey)}
         </button>
       ))}
     </div>

@@ -1,6 +1,8 @@
 'use client';
 
 import { getTranslation } from '@/lib/pinyinUtils';
+import { useLanguage } from './LanguageProvider';
+import { Meaning } from './Meaning';
 
 interface PhraseEntry {
   char: string;
@@ -14,6 +16,7 @@ interface PhraseBuilderProps {
 }
 
 export function PhraseBuilder({ entries, onClear }: PhraseBuilderProps) {
+  const { t } = useLanguage();
   if (entries.length === 0) return null;
 
   const chars = entries.map((e) => e.char);
@@ -33,14 +36,17 @@ export function PhraseBuilder({ entries, onClear }: PhraseBuilderProps) {
 
       {/* Translation */}
       <div className="flex flex-1 items-center self-center">
-        <span className="font-sans text-base text-ink-light italic">{translation}</span>
+        <Meaning
+          text={translation}
+          className="font-sans text-base text-ink-light italic"
+        />
       </div>
 
       {/* Clear button */}
       <button
         onClick={onClear}
         className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-ink-light/40 transition-colors hover:bg-ink-wash hover:text-ink-light self-center"
-        title="Clear phrase"
+        title={t('action.clearPhrase')}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="18" y1="6" x2="6" y2="18" />

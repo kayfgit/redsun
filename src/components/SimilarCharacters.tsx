@@ -1,6 +1,7 @@
 'use client';
 
 import { CharacterButton } from './CharacterButton';
+import { useLanguage } from './LanguageProvider';
 
 interface SimilarCharactersProps {
   characters: string[];
@@ -20,20 +21,24 @@ export function SimilarCharacters({
   onSelect,
   isLoading = false,
   title,
-  emptyHint = 'Draw a character to see matches',
+  emptyHint,
 }: SimilarCharactersProps) {
+  const { t } = useLanguage();
   // Detect if items are phrases (multi-char) or single characters
   const isPhrase = characters.length > 0 && characters[0].length > 1;
 
   return (
     <div className="flex flex-col gap-4">
       <h2 className="font-sans text-sm font-medium uppercase tracking-widest text-ink-light">
-        {title || (isPhrase ? 'Phrase Candidates' : 'Similar Characters')}
+        {title ||
+          (isPhrase
+            ? t('panel.phraseCandidates')
+            : t('panel.similarCharacters'))}
       </h2>
 
       {characters.length === 0 && !isLoading ? (
         <p className="py-12 text-center font-sans text-base text-ink-light/60">
-          {emptyHint}
+          {emptyHint ?? t('hint.draw')}
         </p>
       ) : isLoading ? (
         <div className="grid grid-cols-4 gap-2.5">

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getCandidates, resolveInput, resolvePhrase, splitPinyin } from '@/lib/pinyinUtils';
 import { CHAR_INFO } from '@/lib/pinyinData';
+import { useLanguage } from './LanguageProvider';
 
 interface PhraseEntry {
   char: string;
@@ -18,6 +19,7 @@ interface TypeInputProps {
 }
 
 export function TypeInput({ onMatches, onConfirm, selectedIndex, onSelectedIndexChange }: TypeInputProps) {
+  const { t } = useLanguage();
   const [query, setQuery] = useState('');
   const matchesRef = useRef<string[]>([]);
 
@@ -110,14 +112,12 @@ export function TypeInput({ onMatches, onConfirm, selectedIndex, onSelectedIndex
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Type pinyin or character..."
+          placeholder={t('type.placeholder')}
           className="w-full border-b-2 border-ink/20 bg-transparent py-3 text-center font-serif-cn text-2xl text-ink placeholder:font-sans placeholder:text-base placeholder:text-ink-light/40 outline-none transition-colors focus:border-ink/50"
           autoFocus
         />
         <p className="mt-3 text-center font-sans text-xs text-ink-light/50">
-          {isPhrase
-            ? 'Tab / Shift+Tab to browse \u00B7 Enter to confirm'
-            : 'e.g. \u201Cren\u201D \u2192 \u4EBA \u00B7 Enter to confirm'}
+          {isPhrase ? t('type.phraseHint') : t('type.charHint')}
         </p>
       </div>
     </div>

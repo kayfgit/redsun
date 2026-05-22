@@ -11,6 +11,7 @@ import { SimilarCharacters } from '@/components/SimilarCharacters';
 import { PhraseBuilder } from '@/components/PhraseBuilder';
 import { CharacterModal } from '@/components/CharacterModal';
 import { useCharacterRecognition } from '@/hooks/useCharacterRecognition';
+import { useLanguage } from '@/components/LanguageProvider';
 import { CHAR_INFO } from '@/lib/pinyinData';
 
 interface PhraseEntry {
@@ -20,6 +21,7 @@ interface PhraseEntry {
 }
 
 export default function Home() {
+  const { t } = useLanguage();
   const [mode, setMode] = useState<InputMode>('draw');
   const [selectedChar, setSelectedChar] = useState<string | null>(null);
   const [typeMatches, setTypeMatches] = useState<string[]>([]);
@@ -102,10 +104,10 @@ export default function Home() {
   // Empty-state hint, phrased for whichever input mode is active.
   const emptyHint =
     mode === 'type'
-      ? 'Type pinyin to see matches'
+      ? t('hint.type')
       : mode === 'speak'
-        ? 'Hold to speak and see matches'
-        : 'Draw a character to see matches';
+        ? t('hint.speak')
+        : t('hint.draw');
 
   return (
     <div className="relative z-10 flex h-full flex-col overflow-hidden">

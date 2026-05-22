@@ -7,6 +7,8 @@ import { playBeep } from '@/lib/beep';
 import { PronounceButton } from './PronounceButton';
 import { CHAR_INFO, PINYIN_MAP, PHRASE_DICT } from '@/lib/pinyinData';
 import { CharacterDetail } from './CharacterDetail';
+import { useLanguage } from './LanguageProvider';
+import { Meaning } from './Meaning';
 
 interface SpeakInputProps {
   onMatches: (matches: string[]) => void;
@@ -26,6 +28,7 @@ export function SpeakInput({
   detailChar,
   onDetailCharChange,
 }: SpeakInputProps) {
+  const { t } = useLanguage();
   const [phase, setPhase] = useState<Phase>('idle');
   // The full detected text — a single character or a multi-character phrase.
   const [detected, setDetected] = useState<string | null>(null);
@@ -65,20 +68,20 @@ export function SpeakInput({
             ...similar.filter((c) => c !== detectedText),
           ];
           onMatches(ordered.slice(0, 12));
-          onPanelTitle('Similar Matches');
+          onPanelTitle(t('panel.similarMatches'));
         } else {
           onMatches([detectedText]);
-          onPanelTitle('Detected');
+          onPanelTitle(t('panel.detected'));
         }
       } else {
         // Phrase — list its individual characters.
         onMatches(chars);
-        onPanelTitle('Characters');
+        onPanelTitle(t('panel.characters'));
       }
 
       setPhase('result');
     },
-    [onMatches, onPanelTitle]
+    [onMatches, onPanelTitle, t]
   );
 
   const { transcript, isSupported, start, stop, reset } = useSpeechRecognition({
@@ -133,10 +136,10 @@ export function SpeakInput({
     return (
       <div className="flex w-full max-w-[600px] flex-col items-center justify-center gap-2 aspect-square">
         <p className="px-4 text-center font-sans text-sm text-ink-light">
-          Speech recognition is not supported in this browser.
+          {t('speak.unsupported')}
           <br />
           <span className="text-xs text-ink-light/50">
-            Try Chrome or Edge for speech input.
+            {t('speak.unsupportedHint')}
           </span>
         </p>
       </div>
@@ -158,7 +161,7 @@ export function SpeakInput({
     return (
       <div className="flex w-full max-w-[600px] flex-col items-center justify-center gap-6 aspect-square">
         <div className="h-14 w-14 animate-spin rounded-full border-2 border-ink/15 border-t-seal-red" />
-        <p className="font-sans text-base text-ink-light">Recognizing…</p>
+        <p className="font-sans text-base text-ink-light">{t('speak.recognizing')}</p>
       </div>
     );
   }
@@ -191,7 +194,10 @@ export function SpeakInput({
           <PronounceButton text={detected} iconSize={24} className="h-12 w-12" />
         </div>
 
-        <span className="font-sans text-lg text-ink-light italic">{meaning}</span>
+        <Meaning
+          text={meaning}
+          className="font-sans text-lg text-ink-light italic"
+        />
 
         <div className="mt-4 flex gap-3">
           <button
@@ -212,7 +218,7 @@ export function SpeakInput({
                 </>
               )}
             </svg>
-            {copied ? 'Copied!' : 'Copy'}
+            {copied ? t('action.copied') : t('action.copy')}
           </button>
           <button
             onClick={handleSpeakAgain}
@@ -223,7 +229,7 @@ export function SpeakInput({
               <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
               <line x1="12" x2="12" y1="19" y2="22" />
             </svg>
-            Speak again
+            {t('speak.speakAgain')}
           </button>
         </div>
       </div>
@@ -270,10 +276,10 @@ export function SpeakInput({
 
       <p className="font-sans text-base text-ink-light">
         {isCapturing
-          ? 'Listening… release to stop'
+          ? t('speak.listening')
           : phase === 'empty'
-            ? "Didn't catch that — hold and try again"
-            : 'Hold to speak'}
+            ? t('speak.empty')
+            : t('speak.hold')}
       </p>
 
       {isCapturing && transcript && (

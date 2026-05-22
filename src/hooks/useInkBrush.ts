@@ -22,7 +22,6 @@ export function useInkBrush(
   const [isDrawing, setIsDrawing] = useState(false);
   const currentStrokeRef = useRef<Point[]>([]);
   const bristlesRef = useRef<Bristle[]>([]);
-  const cumDistRef = useRef(0);
   const segmentIndexRef = useRef(0);
 
   // Synthesised brushing sound; lazily builds its audio graph on first stroke.
@@ -92,10 +91,9 @@ export function useInkBrush(
       // inside the pointerdown user gesture, as browsers require).
       brushSoundRef.current?.move(3);
 
-      // Fresh bristles + ink for this stroke (unique geometry each time)
+      // Fresh bristles for this stroke (unique geometry each time)
       const seed = point.x * 1000 + point.y + performance.now();
       bristlesRef.current = makeBristles(seed);
-      cumDistRef.current = 0;
       segmentIndexRef.current = 0;
 
       // Draw initial dot — slightly irregular
@@ -140,9 +138,7 @@ export function useInkBrush(
         const dist = Math.sqrt(d2);
         brushSoundRef.current?.move(dist);
 
-        // Track ink depletion: brush dries as it travels (fixed supply model)
-        cumDistRef.current += dist;
-        const inkLoad = inkLoadFromDistance(cumDistRef.current);
+        const inkLoad = inkLoadFromDistance();
 
         segmentIndexRef.current++;
         drawSegment(

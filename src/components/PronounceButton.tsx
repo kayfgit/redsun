@@ -1,6 +1,7 @@
 'use client';
 
 import { usePronounce } from '@/hooks/usePronounce';
+import { useLanguage } from './LanguageProvider';
 
 interface PronounceButtonProps {
   /** The character or phrase to speak aloud. */
@@ -54,12 +55,13 @@ export function PronounceButton({
   className = '',
 }: PronounceButtonProps) {
   const { speaking, pronounce } = usePronounce();
+  const { t } = useLanguage();
 
   return (
     <button
       onClick={() => pronounce(text)}
-      title={speaking ? 'Playing…' : 'Play pronunciation'}
-      aria-label="Play pronunciation"
+      title={speaking ? t('pronounce.playing') : t('pronounce.play')}
+      aria-label={t('pronounce.play')}
       className={`flex items-center justify-center rounded-full transition-colors ${
         speaking
           ? 'bg-seal-red/10 text-seal-red'

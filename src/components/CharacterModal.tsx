@@ -5,6 +5,9 @@ import { CHAR_INFO } from '@/lib/pinyinData';
 import { findExamplePhrases, findHomophones } from '@/lib/pinyinUtils';
 import { useCopy } from '@/hooks/useCopy';
 import { PronounceButton } from './PronounceButton';
+import { useLanguage } from './LanguageProvider';
+import { Meaning } from './Meaning';
+import type { TranslationKey } from '@/lib/i18n';
 
 /** Clipboard / checkmark glyph, swapped when a copy succeeds. */
 function CopyGlyph({ copied }: { copied: boolean }) {
@@ -28,6 +31,7 @@ interface CharacterModalProps {
 }
 
 export function CharacterModal({ character, onClose }: CharacterModalProps) {
+  const { t } = useLanguage();
   // `view` is the entry currently shown — starts at the opened character and
   // changes when the user drills into a single character of a phrase.
   const [view, setView] = useState(character);
@@ -68,13 +72,13 @@ export function CharacterModal({ character, onClose }: CharacterModalProps) {
           <button
             onClick={() => setView(character)}
             className="absolute left-4 top-4 z-10 flex h-9 items-center gap-1 rounded-full pl-2 pr-3 font-sans text-sm text-ink-light transition-colors hover:bg-ink/10 hover:text-ink"
-            aria-label="Back to phrase"
+            aria-label={t('action.backToPhrase')}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M19 12H5" />
               <path d="m12 19-7-7 7-7" />
             </svg>
-            Back
+            {t('action.back')}
           </button>
         )}
 
@@ -82,7 +86,7 @@ export function CharacterModal({ character, onClose }: CharacterModalProps) {
         <button
           onClick={onClose}
           className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full text-ink-light transition-colors hover:bg-ink/10 hover:text-ink"
-          aria-label="Close"
+          aria-label={t('action.close')}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M18 6 6 18M6 6l12 12" />
@@ -104,10 +108,14 @@ export function CharacterModal({ character, onClose }: CharacterModalProps) {
 // ── Single character view ──
 
 function CharView({ character }: { character: string }) {
+  const { t } = useLanguage();
   const info = CHAR_INFO[character];
   const pinyin = info?.pinyin || '?';
   const meaning = info?.meaning || '?';
   const tone = getTone(pinyin);
+  const toneLabel = tone.descKey
+    ? `${t(tone.nameKey)} · ${t(tone.descKey)}`
+    : t(tone.nameKey);
 
   const examples = findExamplePhrases(character, 4);
   const homophones = findHomophones(character, 8);
@@ -138,22 +146,25 @@ function CharView({ character }: { character: string }) {
                   ? 'bg-seal-red/10 text-seal-red'
                   : 'bg-ink-wash text-ink-light hover:bg-ink/10 hover:text-ink'
               }`}
-              title={copied ? 'Copied!' : 'Copy character'}
-              aria-label="Copy character"
+              title={copied ? t('action.copied') : t('action.copyCharacter')}
+              aria-label={t('action.copyCharacter')}
             >
               <CopyGlyph copied={copied} />
             </button>
           </div>
         </div>
 
-        <span className="font-sans text-base italic text-ink-light">{meaning}</span>
+        <Meaning
+          text={meaning}
+          className="font-sans text-base italic text-ink-light"
+        />
 
         <div className="flex items-center gap-2 font-sans text-[11px] uppercase tracking-widest text-ink-light/60">
           <span
             className="inline-block h-1.5 w-1.5 rounded-full"
             style={{ backgroundColor: TONE_COLORS[tone.id] }}
           />
-          {tone.label}
+          {toneLabel}
         </div>
       </div>
 
@@ -161,7 +172,7 @@ function CharView({ character }: { character: string }) {
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {/* Stroke order placeholder */}
-        <Section title="Stroke order">
+        <Section title={t('modal.strokeOrder')}>
           <div
             className="flex aspect-square w-full max-w-[160px] mx-auto items-center justify-center rounded-sm"
             style={{
@@ -174,12 +185,12 @@ function CharView({ character }: { character: string }) {
             </span>
           </div>
           <p className="mt-2 text-center font-sans text-[11px] text-ink-light/60">
-            Animated stroke order coming soon
+            {t('modal.strokeOrderSoon')}
           </p>
         </Section>
 
         {/* Example phrases */}
-        <Section title="In a phrase">
+        <Section title={t('modal.inPhrase')}>
           {examples.length > 0 ? (
             <ul className="flex flex-col gap-2">
               {examples.map((ex) => (
@@ -199,9 +210,10 @@ function CharView({ character }: { character: string }) {
                         </span>
                       ))}
                     </span>
-                    <span className="font-sans text-xs italic text-ink-light">
-                      {ex.meaning}
-                    </span>
+                    <Meaning
+                      text={ex.meaning}
+                      className="font-sans text-xs italic text-ink-light"
+                    />
                   </div>
                   <span className="font-sans text-[11px] tracking-wide text-ink-light/70">
                     {ex.pinyin}
@@ -211,7 +223,7 @@ function CharView({ character }: { character: string }) {
             </ul>
           ) : (
             <p className="text-center font-sans text-sm text-ink-light/60 py-4">
-              No example phrases yet.
+              {t('modal.noExamples')}
             </p>
           )}
         </Section>
@@ -219,7 +231,7 @@ function CharView({ character }: { character: string }) {
 
       {/* Homophones */}
       {homophones.length > 0 && (
-        <Section title={`Same pinyin (${stripTone(pinyin)})`}>
+        <Section title={`${t('modal.samePinyin')} (${stripTone(pinyin)})`}>
           <div className="flex flex-wrap gap-2">
             {homophones.map((c) => {
               const ci = CHAR_INFO[c];
@@ -231,9 +243,10 @@ function CharView({ character }: { character: string }) {
                   title={ci ? `${ci.pinyin} — ${ci.meaning}` : c}
                 >
                   <span className="font-serif-cn text-xl text-ink">{c}</span>
-                  <span className="font-sans text-xs text-ink-light/70">
-                    {ci?.meaning || '?'}
-                  </span>
+                  <Meaning
+                    text={ci?.meaning || '?'}
+                    className="font-sans text-xs text-ink-light/70"
+                  />
                 </div>
               );
             })}
@@ -253,6 +266,7 @@ function PhraseView({
   phrase: string;
   onSelectChar: (char: string) => void;
 }) {
+  const { t } = useLanguage();
   const chars = phrase.split('');
   const pinyinJoined = chars.map((c) => CHAR_INFO[c]?.pinyin || c).join(' ');
   const meaningJoined = chars
@@ -280,21 +294,22 @@ function PhraseView({
                   ? 'bg-seal-red/10 text-seal-red'
                   : 'bg-ink-wash text-ink-light hover:bg-ink/10 hover:text-ink'
               }`}
-              title={copied ? 'Copied!' : 'Copy phrase'}
-              aria-label="Copy phrase"
+              title={copied ? t('action.copied') : t('action.copyPhrase')}
+              aria-label={t('action.copyPhrase')}
             >
               <CopyGlyph copied={copied} />
             </button>
           </div>
         </div>
-        <span className="font-sans text-base italic text-ink-light">
-          {meaningJoined}
-        </span>
+        <Meaning
+          text={meaningJoined}
+          className="font-sans text-base italic text-ink-light"
+        />
       </div>
 
       <div className="ink-wash-divider" />
 
-      <Section title="Characters">
+      <Section title={t('panel.characters')}>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {chars.map((c, i) => {
             const ci = CHAR_INFO[c];
@@ -304,16 +319,17 @@ function PhraseView({
                 onClick={() => onSelectChar(c)}
                 className="flex items-center gap-3 rounded-sm bg-canvas-bg px-3 py-2 text-left transition-colors hover:bg-rice-paper-dark"
                 style={{ border: '1px solid rgba(26,26,26,0.06)' }}
-                title={`View ${c}`}
+                title={`${t('modal.view')} ${c}`}
               >
                 <span className="font-serif-cn text-4xl text-ink">{c}</span>
                 <div className="flex flex-col">
                   <span className="font-sans text-sm text-ink">
                     {ci?.pinyin || '?'}
                   </span>
-                  <span className="font-sans text-xs italic text-ink-light">
-                    {ci?.meaning || '?'}
-                  </span>
+                  <Meaning
+                    text={ci?.meaning || '?'}
+                    className="font-sans text-xs italic text-ink-light"
+                  />
                 </div>
                 <svg
                   className="ml-auto text-ink-light/40"
@@ -358,12 +374,18 @@ const TONE_COLORS: Record<number, string> = {
   0: '#7A736C',  // muted, neutral
 };
 
-function getTone(pinyin: string): { id: number; label: string } {
-  if (/[āēīōūǖ]/.test(pinyin)) return { id: 1, label: '1st tone · flat' };
-  if (/[áéíóúǘ]/.test(pinyin)) return { id: 2, label: '2nd tone · rising' };
-  if (/[ǎěǐǒǔǚ]/.test(pinyin)) return { id: 3, label: '3rd tone · dipping' };
-  if (/[àèìòùǜ]/.test(pinyin)) return { id: 4, label: '4th tone · falling' };
-  return { id: 0, label: 'neutral tone' };
+type ToneInfo = {
+  id: number;
+  nameKey: TranslationKey;
+  descKey: TranslationKey | null;
+};
+
+function getTone(pinyin: string): ToneInfo {
+  if (/[āēīōūǖ]/.test(pinyin)) return { id: 1, nameKey: 'tone.first', descKey: 'tone.flat' };
+  if (/[áéíóúǘ]/.test(pinyin)) return { id: 2, nameKey: 'tone.second', descKey: 'tone.rising' };
+  if (/[ǎěǐǒǔǚ]/.test(pinyin)) return { id: 3, nameKey: 'tone.third', descKey: 'tone.dipping' };
+  if (/[àèìòùǜ]/.test(pinyin)) return { id: 4, nameKey: 'tone.fourth', descKey: 'tone.falling' };
+  return { id: 0, nameKey: 'tone.neutral', descKey: null };
 }
 
 function stripTone(pinyin: string): string {

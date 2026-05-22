@@ -144,11 +144,8 @@ export function drawSegment(
 
 // ── Full stroke redraw (undo / initial render) ──
 
-/**
- * Ink load is always full — the brush never runs dry. The parameter is kept
- * so existing callers don't need to change.
- */
-export function inkLoadFromDistance(_cumDist: number): number {
+/** Ink load is always full — the brush never runs dry. */
+export function inkLoadFromDistance(): number {
   return 1;
 }
 
@@ -173,14 +170,12 @@ export function drawFullStroke(
   if (points.length < 2) return;
 
   const taperStart = Math.max(2, points.length - 5);
-  let cumDist = 0;
 
   for (let i = 1; i < points.length; i++) {
     const prev = points[i - 1];
     const curr = points[i];
-    cumDist += dist(prev, curr);
 
-    const inkLoad = inkLoadFromDistance(cumDist);
+    const inkLoad = inkLoadFromDistance();
 
     // Taper at stroke end
     let taperScale = 1;
